@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import g, request, jsonify
+from flask import request, jsonify
 
 from ..helper.error_message import moov_errors
 
