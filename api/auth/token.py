@@ -61,12 +61,8 @@ def token_required(f):
         except jwt.InvalidTokenError:
             return unauthorized_response
 
-        expected_payload_format = {
-            "id": "user_id"
-        }
-
         # confirm that payload has required keys
-        if ("id") not in payload.keys():
+        if ("id", "exp") not in payload.keys():
             return unauthorized_response
         else:
             # set current user in flask global variable, g

@@ -37,4 +37,19 @@ class UserSignupSchema(Schema):
         check_unknown_fields(data, original_data, self.fields)
 
 
+class UserLoginSchema(Schema):
+    id = fields.Str(dump_only=True)
+    email = fields.Str(
+        required=True,
+        errors={
+            'required': 'Please provide a valid email.',
+            'type': 'Invalid type'
+        })
+
+    @validates_schema(pass_original=True)
+    def unknown_fields(self, data, original_data):
+        check_unknown_fields(data, original_data, self.fields)
+
+
 user_signup_schema = UserSignupSchema()
+user_login_schema = UserLoginSchema()
