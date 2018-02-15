@@ -10,6 +10,12 @@ def check_unknown_fields(data, original_data, fields):
 
 class UserSignupSchema(Schema):
     id = fields.Str(dump_only=True)
+    user_type = fields.Str(
+        required=True,
+        errors={
+            'required': 'Please provide the user type. It can either be a driver or student',
+            'type': 'Invalid type'
+        })
     firstname = fields.Str(
         required=True,
         errors={

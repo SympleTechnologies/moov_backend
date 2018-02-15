@@ -10,7 +10,7 @@ from flask_jwt import jwt
 from ...auth.validation import validate_request, validate_input_data
 from ...helper.error_message import moov_errors
 from ...helper.camel_to_snake import camel_to_snake
-from ...models import User, Wallet
+from ...models import User, UserType, Wallet
 from ...schema import user_signup_schema, user_login_schema
 
 
@@ -24,7 +24,7 @@ class UserSignupResource(Resource):
     def post(self):
         json_input = request.get_json()
         
-        keys = ['firstname', 'lastname', 'email', 'image_url']
+        keys = ['user_type', 'firstname', 'lastname', 'email', 'image_url']
 
         _user = {}
         if validate_input_data(json_input, keys, _user):
@@ -36,8 +36,16 @@ class UserSignupResource(Resource):
 
         if User.is_user_data_taken(json_input['email']):
             return moov_errors('User already exists', 400)
+
+        user_type = UserType.query.filter(UserType.title==data['user_type'].lower()).first()
+        user_type_id = user_type.id if user_type else None
+        if data['user_type'].lower() == "admin":
+            return moov_errors("Unauthorized, you cannot create an admin", 401)
+        if not user_type_id:
+            return moov_errors("User type can only be student or driver", 400)
             
         new_user = User(
+            user_type_id=user_type_id,
             firstname=data['firstname'],
             lastname=data['lastname'],
             email=data['email'],

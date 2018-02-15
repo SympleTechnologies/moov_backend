@@ -70,6 +70,7 @@ class User(db.Model, ModelViewsMix):
     __tablename__ = 'User'
 
     id = db.Column(db.String, primary_key=True)
+    user_type_id = db.Column(db.String(), db.ForeignKey('UserType.id'))
     firstname = db.Column(db.String(30), nullable=False)
     lastname = db.Column(db.String(30), nullable=False)
     email = db.Column(db.String(50), unique=True, nullable=False)
@@ -86,6 +87,22 @@ class User(db.Model, ModelViewsMix):
     @classmethod
     def is_user_data_taken(cls, email):
        return db.session.query(db.exists().where(User.email==email)).scalar()
+
+
+class UserType(db.Model, ModelViewsMix):
+  
+    __tablename__ = 'UserType'
+
+    id = db.Column(db.String, primary_key=True)
+    title = db.Column(db.String, unique=True)
+    description = db.Column(db.String, nullable=True)
+    users = db.relationship('User', backref='role', lazy='dynamic')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    modified_at = db.Column(db.DateTime, default=datetime.utcnow,
+            onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return '<UserType %r>' % (self.title)
 
 
 class Wallet(db.Model, ModelViewsMix):
@@ -154,7 +171,7 @@ def fancy_id_generator(mapper, connection, target):
 
 # associate the listener function with models, to execute during the
 # "before_insert" event
-tables = [User, Wallet, Transaction, Notification]
+tables = [User, UserType, Wallet, Transaction, Notification]
 
 for table in tables:
     event.listen(table, 'before_insert', fancy_id_generator)
