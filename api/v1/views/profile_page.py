@@ -3,10 +3,16 @@ import os
 from flask import g, request, jsonify
 from flask_restful import Resource
 
-from ...auth.token import token_required
-from ...helper.error_message import moov_errors
-from ...models import User
-from ...schema import user_signup_schema
+try:
+    from ...auth.token import token_required
+    from ...helper.error_message import moov_errors
+    from ...models import User
+    from ...schema import user_signup_schema
+except ImportError:
+    from moov_backend.api.auth.token import token_required
+    from moov_backend.api.helper.error_message import moov_errors
+    from moov_backend.api.models import User
+    from moov_backend.api.schema import user_signup_schema
 
 
 class BasicInfoResource(Resource):
@@ -19,11 +25,12 @@ class BasicInfoResource(Resource):
         if not _user:
             return moov_errors('User does not exist', 404)
 
-        if (g.current_user.user_type).lower() == "admin":
+        _user_type = (_user.user_type.title).lower()
+        if _user_type == "admin":
             return moov_errors('Unauthorized access', 401)
 
         _data, _ = user_signup_schema.dump(_user)
-        _data["user_type"] = _user.user_type.title
+        _data["user_type"] = _user_type
 
         return jsonify({"status": "success",
                         "data": {
