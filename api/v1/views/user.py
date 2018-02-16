@@ -10,7 +10,7 @@ from flask_jwt import jwt
 from ...auth.validation import validate_request, validate_input_data
 from ...helper.error_message import moov_errors
 from ...helper.camel_to_snake import camel_to_snake
-from ...models import User, UserType, Wallet
+from ...models import User, UserType, Wallet, Transaction, Notification
 from ...schema import user_signup_schema, user_login_schema
 
 
@@ -53,6 +53,12 @@ class UserSignupResource(Resource):
         )
         new_user.save()
 
+        user_wallet = Wallet(
+            wallet_amount= 0.00,
+            user_id = new_user.id,
+        )
+        user_wallet.save()
+
         message = "The profile with email {0} has been created succesfully".format(new_user.email)
 
         _data, _ = user_signup_schema.dump(new_user)
@@ -72,13 +78,13 @@ class UserLoginResource(Resource):
     def post(self):
         json_input = request.get_json()
 
-        data, errors = user_login_schema.load(json_input)
-        if errors:
-            return moov_errors(errors, 422)
-
         keys = ['email']
         if validate_input_data(json_input, keys):
             return validate_input_data(json_input, keys)
+
+        data, errors = user_login_schema.load(json_input)
+        if errors:
+            return moov_errors(errors, 422)
 
         _user = User.query.filter(User.email.like(json_input['email'])).first()
         if not _user:
