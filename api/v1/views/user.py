@@ -10,7 +10,7 @@ from flask_jwt import jwt
 from ...auth.validation import validate_request, validate_input_data
 from ...helper.error_message import moov_errors
 from ...helper.camel_to_snake import camel_to_snake
-from ...models import User, UserType, Wallet, Transaction, Notification
+from ...models import User, UserType, Wallet
 from ...schema import user_signup_schema, user_login_schema
 
 
@@ -92,8 +92,9 @@ class UserLoginResource(Resource):
 
         exp_date = datetime.datetime.utcnow()
         payload = {
-                    "id":_user.id,
-                    "exp": exp_date + datetime.timedelta(days=3)
+                    "id": _user.id,
+                    "exp": exp_date + datetime.timedelta(days=3),
+                    "user_type": _user.user_type.title
                 }
         _token = jwt.encode(payload, os.getenv("TOKEN_KEY"), algorithm='HS256')
 

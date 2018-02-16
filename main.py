@@ -13,10 +13,12 @@ try:
     from config import app_configuration
     from api.v1.views.route import RouteResource
     from api.v1.views.user import UserSignupResource, UserLoginResource
+    from api.v1.views.profile_page import BasicInfoResource
 except ImportError:
     from moov_backend.config import app_configuration
     from moov_backend.api.v1.views.route import RouteResource
     from moov_backend.api.v1.views.user import UserSignupResource, UserLoginResource
+    from moov_backend.api.v1.views.profile_page import BasicInfoResource
 
 
 dotenv_path = join(dirname(__file__), '.env')
@@ -60,8 +62,13 @@ def create_flask_app(environment):
     ## Actually setup the Api resource routing here
     ##
     api.add_resource(RouteResource, '/api/v1/route', '/api/v1/route/', endpoint='single_route')
+
+    # Authentication routes
     api.add_resource(UserSignupResource, '/api/v1/signup', '/api/v1/signup/', endpoint='singup_user')
     api.add_resource(UserLoginResource, '/api/v1/login', '/api/v1/login/', endpoint='login_user')
+
+    # Profile Page routes
+    api.add_resource(BasicInfoResource, '/api/v1/basic_info', '/api/v1/basic_info/', endpoint='user_basic_info')
 
     # handle default 404 exceptions with a custom response
     @app.errorhandler(404)

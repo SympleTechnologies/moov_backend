@@ -4,6 +4,19 @@ from flask import g, request, jsonify
 from flask_jwt import jwt
 
 
+# define a user class
+class CurrentUser(object):
+    def __init__(self, user_id, exp, user_type):
+        self.id = user_id
+        self.exp = exp
+        self.user_type = user_type
+
+    def __repr__(self):
+        return ("<CurrentUser \n"
+                "id - {} \n"
+                "exp - {} \n"
+                "user_type - {} >").format(self.id, self.exp, self.user_type)
+
 # authorization decorator
 def token_required(f):
     @wraps(f)
@@ -60,13 +73,21 @@ def token_required(f):
             return expired_response
         except jwt.InvalidTokenError:
             return unauthorized_response
+        
+        # convert payload keys from unicode to string
+        payload_keys = [str(key) for key in payload.keys()]
 
         # confirm that payload has required keys
-        if ("id", "exp") not in payload.keys():
+        if ["id", "exp", "user_type"] != payload_keys:
             return unauthorized_response
         else:
+            # instantiate user object
+            current_user = CurrentUser(
+                str(payload["id"]), str(payload["exp"]), str(payload["user_type"])
+                )
+
             # set current user in flask global variable, g
-            g.current_user = payload["id"]
+            g.current_user = current_user
 
             # now return wrapped function
             return f(*args, **kwargs)

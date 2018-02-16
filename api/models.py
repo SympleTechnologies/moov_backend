@@ -16,6 +16,11 @@ except ImportError:
     from moov_backend.api.generator.id_generator import PushID
 
 
+def to_camel_case(snake_str):
+    title_str = snake_str.title().replace("_", "")
+    return title_str[0].lower() + title_str[1:]
+
+
 class StringyJSON(TypeDecorator):
     """Stores and retrieves JSON as TEXT."""
 
@@ -44,6 +49,11 @@ json_type = type_map[os.getenv("DB_TYPE")]
 db = SQLAlchemy()
 
 class ModelViewsMix(object):
+
+    def serialize(self):
+        return {to_camel_case(column.name): getattr(self, column.name)
+                for column in self.__table__.columns}
+
     def save(self):
         """Saves an instance of the model to the database."""
         try:
@@ -96,7 +106,7 @@ class UserType(db.Model, ModelViewsMix):
     id = db.Column(db.String, primary_key=True)
     title = db.Column(db.String, unique=True)
     description = db.Column(db.String, nullable=True)
-    users = db.relationship('User', backref='role', lazy='dynamic')
+    users = db.relationship('User', backref='user_type', lazy='dynamic')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow,
             onupdate=datetime.utcnow)
