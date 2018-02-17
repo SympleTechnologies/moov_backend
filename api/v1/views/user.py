@@ -64,6 +64,13 @@ class UserSignupResource(Resource):
         )
         user_wallet.save()
 
+        exp_date = datetime.datetime.utcnow()
+        payload = {
+                    "id": new_user.id,
+                    "exp": exp_date + datetime.timedelta(days=3)
+                }
+        _token = jwt.encode(payload, os.getenv("TOKEN_KEY"), algorithm='HS256')
+
         message = "The profile with email {0} has been created succesfully".format(new_user.email)
 
         _data, _ = user_signup_schema.dump(new_user)
@@ -72,7 +79,8 @@ class UserSignupResource(Resource):
             'status': 'success',
             'data': {
                 'user': _data,
-                'message': message
+                'message': message,
+                'token': _token
             }
         }, 201
 
