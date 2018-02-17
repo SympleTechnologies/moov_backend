@@ -8,11 +8,13 @@ from flask_restful import Resource
 from flask_jwt import jwt
 
 try:
+    from ...auth.token import token_required
     from ...auth.validation import validate_request, validate_input_data
     from ...helper.error_message import moov_errors
     from ...models import User, UserType, Wallet
     from ...schema import user_signup_schema, user_login_schema
 except ImportError:
+    from moov_backend.api.auth.token import token_required
     from moov_backend.api.auth.validation import validate_request, validate_input_data
     from moov_backend.api.helper.error_message import moov_errors
     from moov_backend.api.models import User, UserType, Wallet
@@ -21,6 +23,38 @@ except ImportError:
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
+
+
+class UserResource(Resource):
+    
+    @token_required
+    def delete(self):
+        json_input = request.get_json()
+        if "email" not in json_input:
+            return moov_errors("Please provide email of user to delete", 400)
+
+        keys = ['email']
+        if validate_input_data(json_input, keys):
+            return validate_input_data(json_input, keys)
+
+        _current_user_id = g.current_user.id
+        _current_user = User.query.get(_current_user_id)
+        _user_to_delete = User.query.filter(User.email == json_input["email"]).first()
+        if not _current_user or not _user_to_delete:
+            return moov_errors("User does not exist", 404)
+
+        if _user_to_delete.user_type.title == "admin":
+            return moov_errors("Unauthorized access. You cannot delete an admin", 400)
+
+        if str(_current_user.email) != str(_user_to_delete.email) and \
+        str(_current_user.user_type.title) != "admin":
+            return moov_errors("Unauthorized access. You cannot delete this user", 401)
+
+        _user_to_delete.delete()
+        return {
+            'status': 'success',
+            'data': None
+        }, 200
 
 
 class UserSignupResource(Resource):
@@ -74,6 +108,7 @@ class UserSignupResource(Resource):
         message = "The profile with email {0} has been created succesfully".format(new_user.email)
 
         _data, _ = user_signup_schema.dump(new_user)
+        _data["wallet_amount"] = user_wallet.wallet_amount
 
         return {
             'status': 'success',
@@ -103,6 +138,8 @@ class UserLoginResource(Resource):
         if not _user:
             return moov_errors('User does not exist', 404)
 
+        _user_wallet = Wallet.query.filter(Wallet.user_id==_user.id).first()
+
         exp_date = datetime.datetime.utcnow()
         payload = {
                     "id": _user.id,
@@ -110,8 +147,12 @@ class UserLoginResource(Resource):
                 }
         _token = jwt.encode(payload, os.getenv("TOKEN_KEY"), algorithm='HS256')
 
+        _data, _ = user_signup_schema.dump(_user)
+        _data["wallet_amount"] = _user_wallet.wallet_amount if _user_wallet else "Unavailable"
+        _data["user_type"] = _user.user_type.title
         return jsonify({"status": "success",
                         "data": {
+                            "data": _data,
                             "message": "Login successful",
                             "token": str(_token)
                         }

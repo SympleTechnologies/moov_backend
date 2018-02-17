@@ -12,12 +12,12 @@ from flask_restful import Api, abort
 try:
     from config import app_configuration
     from api.v1.views.route import RouteResource
-    from api.v1.views.user import UserSignupResource, UserLoginResource
+    from api.v1.views.user import UserResource, UserSignupResource, UserLoginResource
     from api.v1.views.profile_page import BasicInfoResource
 except ImportError:
     from moov_backend.config import app_configuration
     from moov_backend.api.v1.views.route import RouteResource
-    from moov_backend.api.v1.views.user import UserSignupResource, UserLoginResource
+    from moov_backend.api.v1.views.user import UserResource, UserSignupResource, UserLoginResource
     from moov_backend.api.v1.views.profile_page import BasicInfoResource
 
 
@@ -62,6 +62,9 @@ def create_flask_app(environment):
     ## Actually setup the Api resource routing here
     ##
     api.add_resource(RouteResource, '/api/v1/route', '/api/v1/route/', endpoint='single_route')
+
+    # User routes
+    api.add_resource(UserResource, '/api/v1/user', '/api/v1/user/', endpoint='user_endpoint')
 
     # Authentication routes
     api.add_resource(UserSignupResource, '/api/v1/signup', '/api/v1/signup/', endpoint='singup_user')
