@@ -12,13 +12,13 @@ try:
     from ...auth.validation import validate_request, validate_input_data
     from ...helper.error_message import moov_errors
     from ...models import User, UserType, Wallet
-    from ...schema import user_signup_schema, user_login_schema
+    from ...schema import user_schema, user_login_schema
 except ImportError:
     from moov_backend.api.auth.token import token_required
     from moov_backend.api.auth.validation import validate_request, validate_input_data
     from moov_backend.api.helper.error_message import moov_errors
     from moov_backend.api.models import User, UserType, Wallet
-    from moov_backend.api.schema import user_signup_schema, user_login_schema
+    from moov_backend.api.schema import user_schema, user_login_schema
 
 
 dotenv_path = join(dirname(__file__), '.env')
@@ -70,7 +70,7 @@ class UserSignupResource(Resource):
         if validate_input_data(json_input, keys, _user):
             return validate_input_data(json_input, keys, _user)
 
-        data, errors = user_signup_schema.load(json_input)
+        data, errors = user_schema.load(json_input)
         if errors:
             return moov_errors(errors, 422)
 
@@ -108,7 +108,7 @@ class UserSignupResource(Resource):
 
         message = "The profile with email {0} has been created succesfully".format(new_user.email)
 
-        _data, _ = user_signup_schema.dump(new_user)
+        _data, _ = user_schema.dump(new_user)
         _data["wallet_amount"] = user_wallet.wallet_amount
         _data["user_type"] = new_user.user_type.title
 
@@ -149,7 +149,7 @@ class UserLoginResource(Resource):
                 }
         _token = jwt.encode(payload, os.getenv("TOKEN_KEY"), algorithm='HS256')
 
-        _data, _ = user_signup_schema.dump(_user)
+        _data, _ = user_schema.dump(_user)
         _data["wallet_amount"] = _user_wallet.wallet_amount if _user_wallet else "Unavailable"
         _data["user_type"] = _user.user_type.title
         return jsonify({"status": "success",
