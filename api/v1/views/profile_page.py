@@ -7,12 +7,12 @@ try:
     from ...auth.token import token_required
     from ...helper.error_message import moov_errors
     from ...models import User
-    from ...schema import user_signup_schema
+    from ...schema import user_schema
 except ImportError:
     from moov_backend.api.auth.token import token_required
     from moov_backend.api.helper.error_message import moov_errors
     from moov_backend.api.models import User
-    from moov_backend.api.schema import user_signup_schema
+    from moov_backend.api.schema import user_schema
 
 
 class BasicInfoResource(Resource):
@@ -29,7 +29,7 @@ class BasicInfoResource(Resource):
         if _user_type == "admin":
             return moov_errors('Unauthorized access', 401)
 
-        _data, _ = user_signup_schema.dump(_user)
+        _data, _ = user_schema.dump(_user)
         _data["user_type"] = _user_type
 
         return jsonify({"status": "success",

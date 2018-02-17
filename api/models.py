@@ -1,6 +1,7 @@
 # models
 import os
 import json
+import enum
 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import backref, relationship
@@ -75,6 +76,18 @@ class ModelViewsMix(object):
             return error
 
 
+class OperationType(enum.Enum):
+    transfer_type = "transfer"
+    wallet_type = "load_wallet"
+    ride_type = "ride_fare"
+
+
+class TransactionType(enum.Enum):
+    debit_type = "debit"
+    credit_type = "credit"
+    both_types = "debit and credit"
+
+
 class User(db.Model, ModelViewsMix):
     
     __tablename__ = 'User'
@@ -135,10 +148,13 @@ class Transaction(db.Model, ModelViewsMix):
 
     id = db.Column(db.String, primary_key=True)
     transaction_detail = db.Column(db.String, nullable=False)
-    type_of_operation = db.Column(db.String, nullable=False)
+    type_of_operation = db.Column(db.Enum(OperationType), nullable=False)
+    type_of_transaction = db.Column(db.Enum(TransactionType), nullable=False)
     cost_of_transaction = db.Column(db.Float, default=0.00)
-    amount_before_transaction = db.Column(db.Float, default=0.00)
-    amount_after_transaction = db.Column(db.Float, default=0.00)
+    user_amount_before_transaction = db.Column(db.Float, default=0.00)
+    user_amount_after_transaction = db.Column(db.Float, default=0.00)
+    receiver_amount_before_transaction = db.Column(db.Float, default=0.00)
+    receiver_amount_after_transaction = db.Column(db.Float, default=0.00)
     paystack_deduction = db.Column(db.Float, default=0.00)
     user_id = db.Column(db.String(), db.ForeignKey('User.id'))
     sender_id = db.Column(db.String(), db.ForeignKey('User.id'))
