@@ -8,14 +8,14 @@ from main import create_flask_app
 
 try:
     from api.helper.default_data import (
-        create_default_user, create_default_user_types
+        create_user, create_default_user_types
     )
-    from api.models import db, UserType
+    from api.models import db, UserType, User, Wallet
 except ImportError:
     from moov_backend.api.helper.default_data import (
-        create_default_user, create_default_user_types
+        create_user, create_default_user_types
     )
-    from moov_backend.api.models import db, UserType
+    from moov_backend.api.models import db, UserType, User, Wallet
 
 
 environment = os.getenv("FLASK_CONFIG")
@@ -40,7 +40,7 @@ manager.add_command("shell", Shell(make_context=_make_context))
 @manager.command
 def seed_default_data(prompt=True):
     if environment == "production":
-        print("\n\n\tNot happening! Aborting...\n\n")
+        print("\n\n\tNot happening! Aborting...\n\n Aborted\n\n")
         return
 
     if environment in ["testing", "development"]:
@@ -54,7 +54,7 @@ def seed_default_data(prompt=True):
                 db.create_all()
             except SQLAlchemyError as error:
                 db.session.rollback()
-                print("\n\n\tCommand could not execute due to the error below! Aborting...\n\n\n" + str(error) + "\n\n")
+                print("\n\n\tCommand could not execute due to the error below! Aborting...\n\n Aborted\n\n" + str(error) + "\n\n")
                 return
 
             try:
@@ -62,8 +62,35 @@ def seed_default_data(prompt=True):
                 create_default_user_types()
 
                 # seed default user
-                user_type_id = UserType.query.filter_by(title="admin").first().id
-                create_default_user(user_type_id)
+                admin_user_type_id = UserType.query.filter_by(title="admin").first().id
+                moov_user_type_id = UserType.query.filter_by(title="moov").first().id
+                school_user_type_id = UserType.query.filter_by(title="school").first().id
+                car_owner_user_type_id = UserType.query.filter_by(title="car_owner").first().id
+                admin_user = create_user(admin_user_type_id, "admin", os.environ.get('ADMIN_EMAIL'))
+                moov = create_user(moov_user_type_id, "moov", "moov@email.com")
+                school = create_user(school_user_type_id, "school", "school@email.com")
+                car_owner = create_user(car_owner_user_type_id, "school", "car_owner@email.com")
+                admin_user.save()
+                moov.save()
+                school.save()
+                car_owner.save()
+
+                # seed default wallets
+                moov_wallet = Wallet(
+                    user_id= moov.id,
+                    wallet_amount= 0.0
+                )
+                school_wallet = Wallet(
+                    user_id= school.id,
+                    wallet_amount= 0.0
+                )
+                car_owner_wallet = Wallet(
+                    user_id= car_owner.id,
+                    wallet_amount= 0.0
+                )
+                moov_wallet.save()
+                school_wallet.save()
+                car_owner_wallet.save()
 
                 message = "\n\n\tYay *\(^o^)/* \n\n Your database has been succesfully seeded !!! \n\n\t *\(@^_^@)/* <3 <3 \n\n"
             except SQLAlchemyError as error:
@@ -73,7 +100,7 @@ def seed_default_data(prompt=True):
             print(message)
 
         else:
-            print("\n\n\tAborting...\n\n")
+            print("\n\n\tAborting...\n\n\tAborted\n\n")
 
     else:
         print("\n\n\tAborting... Invalid environment '{}'.\n\n"
