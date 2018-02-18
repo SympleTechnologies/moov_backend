@@ -28,6 +28,7 @@ load_dotenv(dotenv_path)
 class UserResource(Resource):
     
     @token_required
+    @validate_request()
     def delete(self):
         json_input = request.get_json()
         if "email" not in json_input:
@@ -109,6 +110,7 @@ class UserSignupResource(Resource):
 
         _data, _ = user_signup_schema.dump(new_user)
         _data["wallet_amount"] = user_wallet.wallet_amount
+        _data["user_type"] = new_user.user_type.title
 
         return {
             'status': 'success',
