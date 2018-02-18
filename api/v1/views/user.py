@@ -41,12 +41,15 @@ class UserResource(Resource):
 
         _current_user_id = g.current_user.id
         _current_user = User.query.get(_current_user_id)
-        _user_to_delete = User.query.filter(User.email == json_input["email"]).first()
+        _user_to_delete = User.query.filter(User.email==json_input["email"]).first()
         if not _current_user or not _user_to_delete:
             return moov_errors("User does not exist", 404)
 
-        if _user_to_delete.user_type.title == "admin":
-            return moov_errors("Unauthorized access. You cannot delete an admin", 400)
+        if _user_to_delete.user_type.title == "admin" or \
+           _user_to_delete.user_type.title == "school" or \
+           _user_to_delete.user_type.title == "car_owner" or \
+           _user_to_delete.user_type.title == "moov":
+            return moov_errors("Unauthorized, you cannot create a/an {0}".format(_user_to_delete.user_type.title), 401)
 
         if str(_current_user.email) != str(_user_to_delete.email) and \
         str(_current_user.user_type.title) != "admin":
@@ -88,8 +91,11 @@ class UserSignupResource(Resource):
 
         user_type = UserType.query.filter(UserType.title==data['user_type'].lower()).first()
         user_type_id = user_type.id if user_type else None
-        if data['user_type'].lower() == "admin":
-            return moov_errors("Unauthorized, you cannot create an admin", 401)
+        if data['user_type'].lower() == "admin" or \
+           data['user_type'].lower() == "school" or \
+           data['user_type'].lower() == "car_owner" or \
+           data['user_type'].lower() == "moov":
+            return moov_errors("Unauthorized, you cannot create a/an {0}".format(data['user_type']), 401)
         if not user_type_id:
             return moov_errors("User type can only be student or driver", 400)
             
@@ -105,6 +111,7 @@ class UserSignupResource(Resource):
         user_wallet = Wallet(
             wallet_amount= 0.00,
             user_id = new_user.id,
+            message = "Initial amount"
         )
         user_wallet.save()
 

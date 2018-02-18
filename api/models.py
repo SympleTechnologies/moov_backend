@@ -135,6 +135,7 @@ class Wallet(db.Model, ModelViewsMix):
     id = db.Column(db.String, primary_key=True)
     wallet_amount =  db.Column(db.Float, default=0.00)
     user_id = db.Column(db.String(), db.ForeignKey('User.id'))
+    message = db.Column(db.String, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
