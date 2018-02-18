@@ -1,0 +1,166 @@
+import os
+
+from flask import g, request, jsonify
+from flask_restful import Resource
+
+try:
+    from ...auth.token import token_required
+    from ...auth.validation import validate_request, validate_input_data
+    from ...helper.error_message import moov_errors
+    from ...helper.transactions_helper import (
+        paystack_deduction_amount, check_transaction_validity
+    )
+    from ...models import (
+        User, Transaction, Wallet, Notification, TransactionType, OperationType
+    )
+    from ...schema import transaction_schema
+except ImportError:
+    from moov_backend.api.auth.token import token_required
+    from moov_backend.api.auth.validation import validate_request, validate_input_data
+    from moov_backend.api.helper.error_message import moov_errors
+    from moov_backend.api.helper.transactions_helper import (
+        paystack_deduction_amount, check_transaction_validity
+    )
+    from moov_backend.api.models import (
+        User, Transaction, Wallet, Notification, TransactionType, OperationType
+    )
+    from moov_backend.api.schema import transaction_schema
+
+
+class TransactionResource(Resource):
+    
+    @token_required
+    @validate_request()
+    def post(self):
+        json_input = request.get_json()
+        
+        keys = ['type_of_operation', 'cost_of_transaction', 'user_id']
+
+        _transaction = {}
+        if validate_input_data(json_input, keys, _transaction):
+            return validate_input_data(json_input, keys, _transaction)
+
+        data, errors = transaction_schema.load(json_input)
+        if errors:
+            return moov_errors(errors, 422)
+
+        # establishing the _current_user is valid and not an admin
+        _current_user_id = g.current_user.id
+
+        _current_user = User.query.get(_current_user_id)
+        if not _current_user:
+            return moov_errors('User does not exist', 404)
+
+        _current_user_type = (_current_user.user_type.title).lower()
+        if _current_user_type == "admin":
+            return moov_errors('Unauthorized access', 401)
+
+        # case load_wallet
+        if str(json_input['type_of_operation']).lower() == 'load_wallet':
+            _current_user_wallet = Wallet.query.filter(Wallet.user_id==_current_user_id).first()
+            cost_of_transaction = json_input["cost_of_transaction"]
+
+            message = "Cost of transaction cannot be a negative value"
+            if check_transaction_validity(cost_of_transaction, message):
+                return check_transaction_validity(cost_of_transaction, message)
+            
+            transaction_detail = "{0}'s wallet has been credited with {1}".format(_current_user.firstname, cost_of_transaction)
+            paystack_deduction = paystack_deduction_amount(cost_of_transaction)
+            user_amount_before_transaction = _current_user_wallet.wallet_amount
+            user_amount_after_transaction = user_amount_before_transaction + (cost_of_transaction - paystack_deduction)
+            user_id = _current_user_id
+            user_wallet_id = _current_user_wallet.id
+
+            new_transaction = Transaction(
+                transaction_detail= transaction_detail,
+                type_of_operation= OperationType.wallet_type,
+                type_of_transaction= TransactionType.credit_type,
+                cost_of_transaction= cost_of_transaction,
+                user_amount_before_transaction= user_amount_before_transaction,
+                user_amount_after_transaction= user_amount_after_transaction,
+                paystack_deduction= paystack_deduction,
+                user_id= user_id,
+                user_wallet_id= user_wallet_id
+            )
+            new_transaction.save()
+
+            _current_user_wallet.wallet_amount = user_amount_after_transaction
+            _current_user_wallet.save()
+
+            _data, _ = transaction_schema.dump(new_transaction)
+            return {
+                    'status': 'success',
+                    'data': {
+                        'transaction': _data,
+                        'message': "Transaction succesful"
+                    }
+                }, 201
+
+        # case ride_fare and transfer
+        if ('user_id') in json_input:
+            cost_of_transaction = json_input["cost_of_transaction"]
+            _user_id = json_input['user_id']
+            _sender_id = _current_user_id
+            _sender = _current_user
+            _user = User.query.filter(User.email==_user_id).first()
+
+            if not _user:
+                return moov_errors("User does not exist", 404)
+            if str(_user.user_type.title) == "admin":
+                return moov_errors("Unauthorized access", 401) 
+            
+
+            _user_wallet = Wallet.query.filter(Wallet.user_id==_user.id).first()
+            _sender_wallet = Wallet.query.filter(Wallet.user_id==_sender_id).first()
+
+            message = "Cost of transaction cannot be a negative value"
+            if check_transaction_validity(cost_of_transaction, message):
+                return check_transaction_validity(cost_of_transaction, message)
+
+            user_amount_before_transaction = _user_wallet.wallet_amount
+            user_amount_after_transaction = _user_wallet.wallet_amount + cost_of_transaction
+            sender_amount_before_transaction = _sender_wallet.wallet_amount
+            sender_amount_after_transaction = _sender_wallet.wallet_amount - cost_of_transaction
+
+            message = "Sorry, you cannot transfer more than your wallet amount"
+            if check_transaction_validity(sender_amount_after_transaction, message):
+                return check_transaction_validity(sender_amount_after_transaction, message)
+
+            if str(json_input['type_of_operation']).lower() == 'transfer':
+                transaction_detail = "{0} transfered N{1} to {2}".format(_sender.email, cost_of_transaction, _user.email)
+                 
+            if str(json_input['type_of_operation']).lower() == 'ride_fare':
+                transaction_detail = "{0} paid N{1} ride fare to {2}".format(_sender.email, cost_of_transaction, _user.email)
+
+            new_transaction = Transaction(
+                transaction_detail= transaction_detail,
+                type_of_operation= OperationType.transfer_type,
+                type_of_transaction= TransactionType.debit_type,
+                cost_of_transaction= cost_of_transaction,
+                user_amount_before_transaction= user_amount_before_transaction,
+                user_amount_after_transaction= user_amount_after_transaction,
+                sender_amount_before_transaction= sender_amount_before_transaction,
+                sender_amount_after_transaction= sender_amount_after_transaction,
+                user_id= _user.id,
+                sender_id= _sender.id,
+                user_wallet_id= _user_wallet.id,
+                sender_wallet_id= _sender_wallet.id
+            )
+            new_transaction.save()
+
+            _user_wallet.wallet_amount = user_amount_after_transaction
+            _sender_wallet.wallet_amount = sender_amount_after_transaction
+            _user_wallet.save()
+            _sender_wallet.save()
+
+            _data, _ = transaction_schema.dump(new_transaction)
+            return {
+                    'status': 'success',
+                    'data': {
+                        'transaction': _data,
+                        'message': "Transaction succesful"
+                    }
+                }, 201
+
+        # cases that don't meet the required condition
+        return moov_errors("Transaction denied", 400) 

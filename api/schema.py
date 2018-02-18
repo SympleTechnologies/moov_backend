@@ -67,7 +67,7 @@ class TransactionSchema(Schema):
                 'required': 'Please provide a valid type of transaction (transfer, load_wallet or ride_fare).',
                 'type': 'Invalid type'
             })
-    cost_of_transaction = fields.Str(
+    cost_of_transaction = fields.Float(
             required=True,
             errors={
                 'required': 'Please provide the cost of transaction.',
@@ -77,8 +77,8 @@ class TransactionSchema(Schema):
     type_of_transaction = fields.Str(errors={'type': 'Invalid type'})
     user_amount_before_transaction = fields.Float(errors={'type': 'Invalid type'})
     user_amount_after_transaction = fields.Float(errors={'type': 'Invalid type'})
-    receiver_amount_before_transaction = fields.Float(errors={'type': 'Invalid type'})
-    receiver_amount_after_transaction = fields.Float(errors={'type': 'Invalid type'})
+    sender_amount_before_transaction = fields.Float(errors={'type': 'Invalid type'})
+    sender_amount_after_transaction = fields.Float(errors={'type': 'Invalid type'})
     paystack_deduction = fields.Float(errors={'type': 'Invalid type'})
     user_id = fields.Str(errors={'type': 'Invalid type'})
     sender_id = fields.Str(errors={'type': 'Invalid type'})
@@ -95,3 +95,4 @@ class TransactionSchema(Schema):
 user_schema = UserSchema()
 user_login_schema = UserLoginSchema()
 transaction_schema = TransactionSchema()
+ 

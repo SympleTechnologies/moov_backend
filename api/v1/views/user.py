@@ -3,6 +3,7 @@ import datetime
 from os.path import join, dirname
 from dotenv import load_dotenv
 
+from sqlalchemy import or_
 from flask import g, request, jsonify
 from flask_restful import Resource
 from flask_jwt import jwt
@@ -11,13 +12,13 @@ try:
     from ...auth.token import token_required
     from ...auth.validation import validate_request, validate_input_data
     from ...helper.error_message import moov_errors
-    from ...models import User, UserType, Wallet
+    from ...models import User, UserType, Wallet, Transaction
     from ...schema import user_schema, user_login_schema
 except ImportError:
     from moov_backend.api.auth.token import token_required
     from moov_backend.api.auth.validation import validate_request, validate_input_data
     from moov_backend.api.helper.error_message import moov_errors
-    from moov_backend.api.models import User, UserType, Wallet
+    from moov_backend.api.models import User, UserType, Wallet, Transaction
     from moov_backend.api.schema import user_schema, user_login_schema
 
 
@@ -51,7 +52,15 @@ class UserResource(Resource):
         str(_current_user.user_type.title) != "admin":
             return moov_errors("Unauthorized access. You cannot delete this user", 401)
 
+        user_wallet = Wallet.query.filter(Wallet.user_id==_user_to_delete.id).first()
+        user_transaction = Transaction.query.filter(or_(Transaction.user_wallet_id.like(user_wallet.id),
+                                        Transaction.sender_wallet_id.like(user_wallet.id))).first()
+        if user_transaction:
+            return moov_errors("Please contact admin to deactivate account", 401)
+
+        user_wallet.delete()
         _user_to_delete.delete()
+
         return {
             'status': 'success',
             'data': None
@@ -111,7 +120,6 @@ class UserSignupResource(Resource):
         _data, _ = user_schema.dump(new_user)
         _data["wallet_amount"] = user_wallet.wallet_amount
         _data["user_type"] = new_user.user_type.title
-
         return {
             'status': 'success',
             'data': {
