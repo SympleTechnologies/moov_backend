@@ -78,15 +78,18 @@ def seed_default_data(prompt=True):
                 # seed default wallets
                 moov_wallet = Wallet(
                     user_id= moov.id,
-                    wallet_amount= 0.0
+                    wallet_amount= 0.0,
+                    message = "Initial amount"
                 )
                 school_wallet = Wallet(
                     user_id= school.id,
-                    wallet_amount= 0.0
+                    wallet_amount= 0.0,
+                    message = "Initial amount"
                 )
                 car_owner_wallet = Wallet(
                     user_id= car_owner.id,
-                    wallet_amount= 0.0
+                    wallet_amount= 0.0,
+                    message = "Initial amount"
                 )
                 moov_wallet.save()
                 school_wallet.save()

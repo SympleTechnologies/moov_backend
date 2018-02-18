@@ -6,7 +6,9 @@ from flask_restful import Resource
 try:
     from ...auth.token import token_required
     from ...auth.validation import validate_request, validate_input_data
-    from ...helper.error_message import moov_errors
+    from ...helper.error_message import moov_errors, not_found_errors
+    from ...helper.user_helper import get_user
+    from ...helper.wallet_helper import get_wallet
     from ...helper.transactions_helper import (
         paystack_deduction_amount, check_transaction_validity
     )
@@ -17,7 +19,9 @@ try:
 except ImportError:
     from moov_backend.api.auth.token import token_required
     from moov_backend.api.auth.validation import validate_request, validate_input_data
-    from moov_backend.api.helper.error_message import moov_errors
+    from moov_backend.api.helper.error_message import moov_errors, not_found_errors
+    from moov_backend.api.helper.user_helper import get_user
+    from moov_backend.api.helper.wallet_helper import get_wallet
     from moov_backend.api.helper.transactions_helper import (
         paystack_deduction_amount, check_transaction_validity
     )
@@ -118,7 +122,6 @@ class TransactionResource(Resource):
                 return check_transaction_validity(cost_of_transaction, message)
 
             user_amount_before_transaction = _user_wallet.wallet_amount
-            user_amount_after_transaction = _user_wallet.wallet_amount + cost_of_transaction
             sender_amount_before_transaction = _sender_wallet.wallet_amount
             sender_amount_after_transaction = _sender_wallet.wallet_amount - cost_of_transaction
 
@@ -128,30 +131,85 @@ class TransactionResource(Resource):
 
             if str(json_input['type_of_operation']).lower() == 'transfer':
                 transaction_detail = "{0} transfered N{1} to {2}".format(_sender.email, cost_of_transaction, _user.email)
+                user_amount_after_transaction = _user_wallet.wallet_amount + cost_of_transaction
+
+                new_transaction = Transaction(
+                    transaction_detail= transaction_detail,
+                    type_of_operation= OperationType.transfer_type,
+                    type_of_transaction= TransactionType.both_types,
+                    cost_of_transaction= cost_of_transaction,
+                    user_amount_before_transaction= user_amount_before_transaction,
+                    user_amount_after_transaction= user_amount_after_transaction,
+                    sender_amount_before_transaction= sender_amount_before_transaction,
+                    sender_amount_after_transaction= sender_amount_after_transaction,
+                    user_id= _user.id,
+                    sender_id= _sender.id,
+                    user_wallet_id= _user_wallet.id,
+                    sender_wallet_id= _sender_wallet.id
+                )
+                new_transaction.save()
+
+                # wallet updates
+                wallet_message = "{0} transfered {1} to {2}".format(_sender.email, sender_amount_after_transaction, _user.email)
+                _user_wallet.wallet_amount = user_amount_after_transaction
+                _user_wallet.message = wallet_message
+                _sender_wallet.wallet_amount = sender_amount_after_transaction
+                _sender_wallet.message = wallet_message
+                _user_wallet.save()
+                _sender_wallet.save()
                  
             if str(json_input['type_of_operation']).lower() == 'ride_fare':
+                moov_wallet = get_wallet(email="moov@email.com")
+                school_wallet = get_wallet(email="school@email.com")
+                car_owner_wallet = get_wallet(email="car_owner@email.com")
+
+                if not moov_wallet:
+                    return not_found_errors("moov@email.com")
+                if not school_wallet:
+                    return not_found_errors("school@email.com")
+                if not car_owner_wallet:
+                    return not_found_errors("car_owner@email.com")
+
                 transaction_detail = "{0} paid N{1} ride fare to {2}".format(_sender.email, cost_of_transaction, _user.email)
+                driver_amount = 0.2 * cost_of_transaction
+                user_amount_after_transaction = user_amount_before_transaction + driver_amount
+                school_wallet_amount = 0.2 * cost_of_transaction
+                car_owner_wallet_amount = 0.2 * cost_of_transaction
+                moov_wallet_amount = cost_of_transaction - (driver_amount + school_wallet_amount + car_owner_wallet_amount)
+                
+                new_transaction = Transaction(
+                    transaction_detail= transaction_detail,
+                    type_of_operation= OperationType.ride_type,
+                    type_of_transaction= TransactionType.both_types,
+                    cost_of_transaction= cost_of_transaction,
+                    user_amount_before_transaction= user_amount_before_transaction,
+                    user_amount_after_transaction= user_amount_after_transaction,
+                    sender_amount_before_transaction= sender_amount_before_transaction,
+                    sender_amount_after_transaction= sender_amount_after_transaction,
+                    user_id= _user.id,
+                    sender_id= _sender.id,
+                    user_wallet_id= _user_wallet.id,
+                    sender_wallet_id= _sender_wallet.id
+                )
+                new_transaction.save()
 
-            new_transaction = Transaction(
-                transaction_detail= transaction_detail,
-                type_of_operation= OperationType.transfer_type,
-                type_of_transaction= TransactionType.debit_type,
-                cost_of_transaction= cost_of_transaction,
-                user_amount_before_transaction= user_amount_before_transaction,
-                user_amount_after_transaction= user_amount_after_transaction,
-                sender_amount_before_transaction= sender_amount_before_transaction,
-                sender_amount_after_transaction= sender_amount_after_transaction,
-                user_id= _user.id,
-                sender_id= _sender.id,
-                user_wallet_id= _user_wallet.id,
-                sender_wallet_id= _sender_wallet.id
-            )
-            new_transaction.save()
-
-            _user_wallet.wallet_amount = user_amount_after_transaction
-            _sender_wallet.wallet_amount = sender_amount_after_transaction
-            _user_wallet.save()
-            _sender_wallet.save()
+                # wallet_updates
+                wallet_message = "Percentage share from transaction: {0}".format(new_transaction.id)
+                moov_wallet.wallet_amount += moov_wallet_amount
+                moov_wallet.message = wallet_message
+                school_wallet.wallet_amount += school_wallet_amount
+                school_wallet.message = wallet_message
+                car_owner_wallet.wallet_amount += car_owner_wallet_amount
+                car_owner_wallet.message = wallet_message
+                _user_wallet.wallet_amount = user_amount_after_transaction
+                _user_wallet.message = "Ride fare with {0}".format(_sender.email)
+                _sender_wallet.wallet_amount = sender_amount_after_transaction
+                _sender_wallet.message = "Ride fare with {0}".format(_user.email)
+                moov_wallet.save()
+                school_wallet.save()
+                car_owner_wallet.save()
+                _user_wallet.save()
+                _sender_wallet.save()
 
             _data, _ = transaction_schema.dump(new_transaction)
             return {
