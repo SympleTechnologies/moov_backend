@@ -71,7 +71,7 @@ def seed_default_data(prompt=True):
 
                 # no wallet needed for admin
                 admin_user = create_user(admin_user_type_id, "admin", os.environ.get('ADMIN_EMAIL'))
-                moov = create_user(moov_user_type_id, "moov", "moov@email.com")
+                moov = create_user(moov_user_type_id, "moov", os.environ.get('MOOV_EMAIL'))
                 school = create_user(school_user_type_id, "school", "school@email.com")
                 car_owner = create_user(car_owner_user_type_id, "school", "car_owner@email.com")
                 admin_user.save()
@@ -84,8 +84,8 @@ def seed_default_data(prompt=True):
                 create_wallet(user_id=car_owner.id, wallet_amount=wallet_amount, message=message)
 
                 # seed percentage prices
-                create_percentage_price(title="car_owner", price=0.0, description="Car owner")
-                create_percentage_price(title="school", price=0.2, description="School")
+                create_percentage_price(title="car_owner@email.com", price=0.0, description="Car owner")
+                create_percentage_price(title="school@email.com", price=0.2, description="School")
                 create_percentage_price(title="driver", price=0.4, description="Driver")
                 create_percentage_price(title="moov", price=0.4, description="Moov")
                 create_percentage_price(title="transfer", price=0.02, description="Transfer")

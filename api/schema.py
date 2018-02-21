@@ -87,10 +87,6 @@ class TransactionSchema(Schema):
     transaction_date = fields.DateTime(dump_only=True)
     modified_at = fields.DateTime(dump_only=True)
 
-    @validates_schema(pass_original=True)
-    def unknown_fields(self, data, original_data):
-        check_unknown_fields(data, original_data, self.fields)
-
 
 user_schema = UserSchema()
 user_login_schema = UserLoginSchema()
