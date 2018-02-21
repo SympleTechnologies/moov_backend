@@ -1,6 +1,6 @@
 import os
 
-from ..models import User, UserType
+from ..models import User, UserType, PercentagePrice, Wallet
 
 def create_default_user_types():
     user_types = ['admin', 'driver', 'student', 'moov', 'school', 'car_owner']
@@ -12,10 +12,28 @@ def create_default_user_types():
         user_type.save()
 
 def create_user(user_type_id, name, email):
-    return User(
-                user_type_id=user_type_id,
-                firstname=name,
-                lastname=name,
-                image_url="https://pixabay.com/en/blank-profile-picture-mystery-man-973461/",
-                email=email
-            )
+    new_user = User(
+                    user_type_id=user_type_id,
+                    firstname=name,
+                    lastname=name,
+                    image_url="https://pixabay.com/en/blank-profile-picture-mystery-man-973461/",
+                    email=email
+                )
+    new_user.save()
+    return new_user
+
+def create_percentage_price(title, price, description):
+    new_percentage_price = PercentagePrice(
+                                title= title,
+                                price= price,
+                                description= "{0}'s percentage price".format(description)        
+                            )
+    return new_percentage_price.save()
+
+def create_wallet(user_id, wallet_amount, message):
+    new_wallet = Wallet(
+                    user_id= user_id,
+                    wallet_amount= wallet_amount,
+                    message= message
+                )
+    return new_wallet.save()

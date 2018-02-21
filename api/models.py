@@ -128,6 +128,22 @@ class UserType(db.Model, ModelViewsMix):
         return '<UserType %r>' % (self.title)
 
 
+class PercentagePrice(db.Model, ModelViewsMix):
+    
+    __tablename__ = "PercentagePrice"
+
+    id = db.Column(db.String, primary_key=True)
+    title = db.Column(db.String, unique=True)
+    price = db.Column(db.Float, nullable=False)
+    description = db.Column(db.String, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    modified_at = db.Column(db.DateTime, default=datetime.utcnow,
+            onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return '<PercentagePrice %r %r>' % (self.description, self.price)
+
+
 class Wallet(db.Model, ModelViewsMix):
     
     __tablename__ = 'Wallet'
@@ -198,7 +214,7 @@ def fancy_id_generator(mapper, connection, target):
 
 # associate the listener function with models, to execute during the
 # "before_insert" event
-tables = [User, UserType, Wallet, Transaction, Notification]
+tables = [User, UserType, Wallet, Transaction, Notification, PercentagePrice]
 
 for table in tables:
     event.listen(table, 'before_insert', fancy_id_generator)
