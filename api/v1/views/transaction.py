@@ -44,7 +44,7 @@ class TransactionResource(Resource):
     def post(self):
         json_input = request.get_json()
         
-        keys = ['type_of_operation', 'cost_of_transaction', 'user_id']
+        keys = ['type_of_operation', 'cost_of_transaction', 'user_id', 'school_email', 'car_owner_email']
 
         _transaction = {}
         if validate_input_data(json_input, keys, _transaction):
@@ -65,10 +65,10 @@ class TransactionResource(Resource):
         if _current_user_type == "admin":
             return moov_errors('Unauthorized access', 401)
 
-        moov_email = "moov@email.com"
+        moov_email = os.environ.get("MOOV_EMAIL")
         moov_user = User.query.filter(User.email==moov_email).first()
         if not moov_user:
-            return not_found_errors("moov@email.com")
+            return not_found_errors(moov_email)
 
         # case load_wallet
         if str(json_input['type_of_operation']).lower() == 'load_wallet':
@@ -122,6 +122,7 @@ class TransactionResource(Resource):
             _sender_id = _current_user_id
             _sender = _current_user
             _user = User.query.filter(User.email==_user_id).first()
+            new_transaction = {}
 
             if not _user:
                 return moov_errors("User does not exist", 404)
@@ -155,9 +156,9 @@ class TransactionResource(Resource):
                 if check_transaction_validity(sender_amount_after_transaction, message):
                   return check_transaction_validity(sender_amount_after_transaction, message)
 
-                moov_wallet = get_wallet(email="moov@email.com")
+                moov_wallet = get_wallet(email=moov_email)
                 if not moov_wallet:
-                    return not_found_errors("moov@email.com")
+                    return not_found_errors(moov_email)
 
                 new_transaction = Transaction(
                     transaction_detail= transaction_detail,
@@ -192,28 +193,52 @@ class TransactionResource(Resource):
                 notification_user_receiver_message = "Your wallet has been credited with N{0} by {1}".format(cost_of_transaction, (str(_sender.firstname)).title())
                 save_notification(recipient_id=_sender.id, sender_id=moov_user.id, message=notification_user_sender_message)
                 save_notification(recipient_id=_user.id, sender_id=moov_user.id, message=notification_user_receiver_message)
+
+                _data, _ = transaction_schema.dump(new_transaction)
+                return {
+                        'status': 'success',
+                        'data': {
+                            'transaction': _data,
+                            'message': "Transaction succesful"
+                        }
+                }, 201
                  
             # case ride_fare
             if str(json_input['type_of_operation']).lower() == 'ride_fare':
-                moov_wallet = get_wallet(email="moov@email.com")
-                school_wallet = get_wallet(email="school@email.com")
-                car_owner_wallet = get_wallet(email="car_owner@email.com")
+                if "school_email" not in json_input:
+                    return moov_errors("school_email field is compulsory for ride fare", 400)
+
+                if not get_user(json_input["school_email"]):
+                    return not_found_errors(json_input["school_email"])
+
+                school_email = json_input["school_email"]
+                car_owner_email = os.environ.get("CAR_OWNER_EMAIL") if ("car_owner" not in json_input) else json_input["car_owner"]
+                if not get_user(car_owner_email):
+                    return not_found_errors(car_owner_email)
+
+                moov_wallet = get_wallet(email=moov_email)
+                school_wallet = get_wallet(email=school_email)
+                car_owner_wallet = get_wallet(email=car_owner_email)
 
                 if not moov_wallet:
-                    return not_found_errors("moov@email.com")
+                    return not_found_errors(moov_email)
                 if not school_wallet:
-                    return not_found_errors("school@email.com")
+                    return not_found_errors(school_email)
                 if not car_owner_wallet:
-                    return not_found_errors("car_owner@email.com")
+                    return not_found_errors(car_owner_email)
 
                 transaction_detail = "{0} paid N{1} ride fare to {2}".format(_sender.email, cost_of_transaction, _user.email)
-                driver_percentage_price = (get_percentage_price(title="driver")).price
-                school_percentage_price = (get_percentage_price(title="school")).price
-                car_owner_percentage_price = (get_percentage_price(title="car_owner")).price
-                driver_amount = driver_percentage_price * cost_of_transaction
+                driver_percentage_price_info = get_percentage_price(title="driver")
+                school_percentage_price_info = get_percentage_price(title=school_email)
+                car_owner_percentage_price_info = get_percentage_price(title=car_owner_email)
+
+                if not car_owner_percentage_price_info or not school_percentage_price_info:
+                    return moov_errors("Percentage price was not set for the school or car_owner ({0}, {1})".format(school_email, car_owner_email), 400)
+
+                driver_amount = driver_percentage_price_info.price * cost_of_transaction
                 user_amount_after_transaction = user_amount_before_transaction + driver_amount
-                school_wallet_amount = school_percentage_price* cost_of_transaction
-                car_owner_wallet_amount = car_owner_percentage_price * cost_of_transaction
+                school_wallet_amount = school_percentage_price_info.price * cost_of_transaction
+                car_owner_wallet_amount = car_owner_percentage_price_info.price * cost_of_transaction
                 moov_wallet_amount = cost_of_transaction - (driver_amount + school_wallet_amount + car_owner_wallet_amount)
                 
                 new_transaction = Transaction(
@@ -255,14 +280,14 @@ class TransactionResource(Resource):
                 save_notification(recipient_id=_sender.id, sender_id=moov_user.id, message=notification_user_sender_message)
                 save_notification(recipient_id=_user.id, sender_id=moov_user.id, message=notification_user_receiver_message)
 
-            _data, _ = transaction_schema.dump(new_transaction)
-            return {
-                    'status': 'success',
-                    'data': {
-                        'transaction': _data,
-                        'message': "Transaction succesful"
-                    }
-                }, 201
+                _data, _ = transaction_schema.dump(new_transaction)
+                return {
+                        'status': 'success',
+                        'data': {
+                            'transaction': _data,
+                            'message': "Transaction succesful"
+                        }
+                    }, 201
 
         # cases that don't meet the required condition
         return moov_errors("Transaction denied", 400) 
