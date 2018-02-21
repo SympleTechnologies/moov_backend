@@ -10,11 +10,13 @@ try:
     from ...helper.user_helper import get_user
     from ...helper.wallet_helper import get_wallet
     from ...helper.notification_helper import save_notification
+    from ...helper.percentage_price_helper import get_percentage_price
     from ...helper.transactions_helper import (
         paystack_deduction_amount, check_transaction_validity
     )
     from ...models import (
-        User, Transaction, Wallet, Notification, TransactionType, OperationType
+        User, Transaction, Wallet, Notification, TransactionType, 
+        OperationType
     )
     from ...schema import transaction_schema
 except ImportError:
@@ -24,11 +26,13 @@ except ImportError:
     from moov_backend.api.helper.user_helper import get_user
     from moov_backend.api.helper.wallet_helper import get_wallet
     from moov_backend.api.helper.notification_helper import save_notification
+    from moov_backend.api.helper.percentage_price_helper import get_percentage_price
     from moov_backend.api.helper.transactions_helper import (
         paystack_deduction_amount, check_transaction_validity
     )
     from moov_backend.api.models import (
-        User, Transaction, Wallet, Notification, TransactionType, OperationType
+        User, Transaction, Wallet, Notification, TransactionType, 
+        OperationType
     )
     from moov_backend.api.schema import transaction_schema
 
@@ -142,10 +146,11 @@ class TransactionResource(Resource):
 
             # case transfer
             if str(json_input['type_of_operation']).lower() == 'transfer':
-                transaction_detail = "{0} transfered N{1} to {2}".format(_sender.email, cost_of_transaction, _user.email)
-                transfer_charge = 0.02 * cost_of_transaction
+                transfer_percentage_price = (get_percentage_price(title="transfer")).price
+                transfer_charge = transfer_percentage_price * cost_of_transaction
                 user_amount_after_transaction = _user_wallet.wallet_amount + cost_of_transaction
                 sender_amount_after_transaction = _sender_wallet.wallet_amount - cost_of_transaction - transfer_charge
+                transaction_detail = "{0} transfered N{1} to {2} with a transaction charge of {3}".format(_sender.email, cost_of_transaction, _user.email, transfer_charge)
 
                 if check_transaction_validity(sender_amount_after_transaction, message):
                   return check_transaction_validity(sender_amount_after_transaction, message)
@@ -202,10 +207,13 @@ class TransactionResource(Resource):
                     return not_found_errors("car_owner@email.com")
 
                 transaction_detail = "{0} paid N{1} ride fare to {2}".format(_sender.email, cost_of_transaction, _user.email)
-                driver_amount = 0.2 * cost_of_transaction
+                driver_percentage_price = (get_percentage_price(title="driver")).price
+                school_percentage_price = (get_percentage_price(title="school")).price
+                car_owner_percentage_price = (get_percentage_price(title="car_owner")).price
+                driver_amount = driver_percentage_price * cost_of_transaction
                 user_amount_after_transaction = user_amount_before_transaction + driver_amount
-                school_wallet_amount = 0.4 * cost_of_transaction
-                car_owner_wallet_amount = 0 * cost_of_transaction
+                school_wallet_amount = school_percentage_price* cost_of_transaction
+                car_owner_wallet_amount = car_owner_percentage_price * cost_of_transaction
                 moov_wallet_amount = cost_of_transaction - (driver_amount + school_wallet_amount + car_owner_wallet_amount)
                 
                 new_transaction = Transaction(

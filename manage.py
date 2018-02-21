@@ -8,12 +8,14 @@ from main import create_flask_app
 
 try:
     from api.helper.default_data import (
-        create_user, create_default_user_types
+        create_user, create_default_user_types, create_percentage_price,
+        create_wallet
     )
     from api.models import db, UserType, User, Wallet
 except ImportError:
     from moov_backend.api.helper.default_data import (
-        create_user, create_default_user_types
+        create_user, create_default_user_types, create_percentage_price,
+        create_wallet
     )
     from moov_backend.api.models import db, UserType, User, Wallet
 
@@ -66,34 +68,27 @@ def seed_default_data(prompt=True):
                 moov_user_type_id = UserType.query.filter_by(title="moov").first().id
                 school_user_type_id = UserType.query.filter_by(title="school").first().id
                 car_owner_user_type_id = UserType.query.filter_by(title="car_owner").first().id
+
+                # no wallet needed for admin
                 admin_user = create_user(admin_user_type_id, "admin", os.environ.get('ADMIN_EMAIL'))
                 moov = create_user(moov_user_type_id, "moov", "moov@email.com")
                 school = create_user(school_user_type_id, "school", "school@email.com")
                 car_owner = create_user(car_owner_user_type_id, "school", "car_owner@email.com")
                 admin_user.save()
-                moov.save()
-                school.save()
-                car_owner.save()
 
                 # seed default wallets
-                moov_wallet = Wallet(
-                    user_id= moov.id,
-                    wallet_amount= 0.0,
-                    message = "Initial amount"
-                )
-                school_wallet = Wallet(
-                    user_id= school.id,
-                    wallet_amount= 0.0,
-                    message = "Initial amount"
-                )
-                car_owner_wallet = Wallet(
-                    user_id= car_owner.id,
-                    wallet_amount= 0.0,
-                    message = "Initial amount"
-                )
-                moov_wallet.save()
-                school_wallet.save()
-                car_owner_wallet.save()
+                message = "Initial amount"
+                wallet_amount = 0.0
+                create_wallet(user_id=moov.id, wallet_amount=wallet_amount, message=message)
+                create_wallet(user_id=school.id, wallet_amount=wallet_amount, message=message)
+                create_wallet(user_id=car_owner.id, wallet_amount=wallet_amount, message=message)
+
+                # seed percentage prices
+                create_percentage_price(title="car_owner", price=0.0, description="Car owner")
+                create_percentage_price(title="school", price=0.2, description="School")
+                create_percentage_price(title="driver", price=0.4, description="Driver")
+                create_percentage_price(title="moov", price=0.4, description="Moov")
+                create_percentage_price(title="transfer", price=0.02, description="Transfer")
 
                 message = "\n\n\tYay *\(^o^)/* \n\n Your database has been succesfully seeded !!! \n\n\t *\(@^_^@)/* <3 <3 \n\n"
             except SQLAlchemyError as error:
