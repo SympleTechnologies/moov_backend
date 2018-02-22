@@ -30,10 +30,10 @@ def create_percentage_price(title, price, description):
                             )
     return new_percentage_price.save()
 
-def create_wallet(user_id, wallet_amount, message):
+def create_wallet(user_id, wallet_amount, description):
     new_wallet = Wallet(
                     user_id= user_id,
                     wallet_amount= wallet_amount,
-                    message= message
+                    description= description
                 )
     return new_wallet.save()

@@ -18,4 +18,3 @@ def get_wallet(user_id=None, email=None):
         _user_id = _user.id
 
     return Wallet.query.filter(Wallet.user_id==_user_id).first()
-

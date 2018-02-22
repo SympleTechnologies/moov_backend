@@ -77,11 +77,10 @@ def seed_default_data(prompt=True):
                 admin_user.save()
 
                 # seed default wallets
-                message = "Initial amount"
                 wallet_amount = 0.0
-                create_wallet(user_id=moov.id, wallet_amount=wallet_amount, message=message)
-                create_wallet(user_id=school.id, wallet_amount=wallet_amount, message=message)
-                create_wallet(user_id=car_owner.id, wallet_amount=wallet_amount, message=message)
+                create_wallet(user_id=moov.id, wallet_amount=wallet_amount, description="Moov Wallet")
+                create_wallet(user_id=school.id, wallet_amount=wallet_amount, description="School Wallet")
+                create_wallet(user_id=car_owner.id, wallet_amount=wallet_amount, description="Car Owner Wallet")
 
                 # seed percentage prices
                 create_percentage_price(title="car_owner@email.com", price=0.0, description="Car owner")

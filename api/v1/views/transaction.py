@@ -177,14 +177,9 @@ class TransactionResource(Resource):
                 new_transaction.save()
 
                 # wallet updates
-                wallet_message = "{0} transfered {1} to {2} with a charge of {3}".format(_sender.email, sender_amount_after_transaction, _receiver.email, transfer_charge)
                 _receiver_wallet.wallet_amount = receiver_amount_after_transaction
-                _receiver_wallet.message = wallet_message
                 _sender_wallet.wallet_amount = sender_amount_after_transaction
-                _sender_wallet.message = wallet_message
-                wallet_message = "Transfer charge for transaction: {0}".format(new_transaction.id)
                 moov_wallet.wallet_amount += transfer_charge
-                moov_wallet.message = wallet_message
                 _receiver_wallet.save()
                 _sender_wallet.save()
                 moov_wallet.save()
@@ -258,17 +253,11 @@ class TransactionResource(Resource):
                 new_transaction.save()
 
                 # wallet_updates
-                wallet_message = "Percentage share from transaction: {0}".format(new_transaction.id)
                 moov_wallet.wallet_amount += moov_wallet_amount
-                moov_wallet.message = wallet_message
                 school_wallet.wallet_amount += school_wallet_amount
-                school_wallet.message = wallet_message
                 car_owner_wallet.wallet_amount += car_owner_wallet_amount
-                car_owner_wallet.message = wallet_message
                 _receiver_wallet.wallet_amount = receiver_amount_after_transaction
-                _receiver_wallet.message = "Ride fare with {0}".format(_sender.email)
                 _sender_wallet.wallet_amount = sender_amount_after_transaction
-                _sender_wallet.message = "Ride fare with {0}".format(_receiver.email)
                 moov_wallet.save()
                 school_wallet.save()
                 car_owner_wallet.save()

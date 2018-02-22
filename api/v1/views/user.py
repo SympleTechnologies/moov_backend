@@ -111,7 +111,7 @@ class UserSignupResource(Resource):
         user_wallet = Wallet(
             wallet_amount= 0.00,
             user_id = new_user.id,
-            message = "Initial amount"
+            description = "{0} {1}'s Wallet".format((new_user.lastname).title(), (new_user.firstname).title())
         )
         user_wallet.save()
 
