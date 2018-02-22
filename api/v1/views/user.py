@@ -56,7 +56,7 @@ class UserResource(Resource):
             return moov_errors("Unauthorized access. You cannot delete this user", 401)
 
         user_wallet = Wallet.query.filter(Wallet.user_id==_user_to_delete.id).first()
-        user_transaction = Transaction.query.filter(or_(Transaction.user_wallet_id.like(user_wallet.id),
+        user_transaction = Transaction.query.filter(or_(Transaction.receiver_wallet_id.like(user_wallet.id),
                                         Transaction.sender_wallet_id.like(user_wallet.id))).first()
         if user_transaction:
             return moov_errors("Please contact admin to deactivate account", 401)
