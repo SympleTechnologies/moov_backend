@@ -147,6 +147,9 @@ class TransactionResource(Resource):
 
             # case transfer
             if str(json_input['type_of_operation']).lower() == 'transfer':
+                if str(_receiver.id) == str(_sender_id):
+                    return moov_errors("Unauthorized. A user cannot transfer to him/herself", 401)
+                
                 transfer_percentage_price = (get_percentage_price(title="transfer")).price
                 transfer_charge = transfer_percentage_price * cost_of_transaction
                 receiver_amount_after_transaction = _receiver_wallet.wallet_amount + cost_of_transaction
