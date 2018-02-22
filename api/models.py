@@ -3,6 +3,7 @@ import os
 import json
 import enum
 
+from alembic import op
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import backref, relationship
 
@@ -15,7 +16,6 @@ try:
     from generator.id_generator import PushID
 except ImportError:
     from moov_backend.api.generator.id_generator import PushID
-
 
 def to_camel_case(snake_str):
     title_str = snake_str.title().replace("_", "")
@@ -168,24 +168,24 @@ class Transaction(db.Model, ModelViewsMix):
     type_of_operation = db.Column(db.Enum(OperationType), nullable=False)
     type_of_transaction = db.Column(db.Enum(TransactionType), nullable=False)
     cost_of_transaction = db.Column(db.Float, default=0.00)
-    user_amount_before_transaction = db.Column(db.Float, default=0.00)
-    user_amount_after_transaction = db.Column(db.Float, default=0.00)
+    receiver_amount_before_transaction = db.Column(db.Float, default=0.00)
+    receiver_amount_after_transaction = db.Column(db.Float, default=0.00)
     sender_amount_before_transaction = db.Column(db.Float, default=0.00)
     sender_amount_after_transaction = db.Column(db.Float, default=0.00)
     paystack_deduction = db.Column(db.Float, default=0.00)
-    user_id = db.Column(db.String(), db.ForeignKey('User.id'))
+    receiver_id = db.Column(db.String(), db.ForeignKey('User.id'))
     sender_id = db.Column(db.String(), db.ForeignKey('User.id'))
-    user = relationship("User", cascade="all,delete-orphan", single_parent=True, foreign_keys=[user_id])
+    receiver = relationship("User", cascade="all,delete-orphan", single_parent=True, foreign_keys=[receiver_id])
     sender = relationship("User", cascade="all,delete-orphan", single_parent=True, foreign_keys=[sender_id])
-    user_wallet_id = db.Column(db.String(), db.ForeignKey('Wallet.id'))
+    receiver_wallet_id = db.Column(db.String(), db.ForeignKey('Wallet.id'))
     sender_wallet_id = db.Column(db.String(), db.ForeignKey('Wallet.id'))
-    user_wallet = relationship("Wallet", cascade="all,delete-orphan", single_parent=True, foreign_keys=[user_wallet_id])
+    receiver_wallet = relationship("Wallet", cascade="all,delete-orphan", single_parent=True, foreign_keys=[receiver_wallet_id])
     sender_wallet = relationship("Wallet", cascade="all,delete-orphan", single_parent=True, foreign_keys=[sender_wallet_id])
     transaction_date = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def __repr__(self):
-        return '<Transaction %r %r>' % (self.user_id, self.transaction_detail)
+        return '<Transaction %r %r>' % (self.receiver_id, self.transaction_detail)
 
 
 class Notification(db.Model, ModelViewsMix):
