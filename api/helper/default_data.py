@@ -16,7 +16,7 @@ def create_user(user_type_id, name, email):
                     user_type_id=user_type_id,
                     firstname=name,
                     lastname=name,
-                    image_url="https://pixabay.com/en/blank-profile-picture-mystery-man-973461/",
+                    image_url="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973461_1280.png",
                     email=email
                 )
     new_user.save()

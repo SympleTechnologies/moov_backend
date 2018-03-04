@@ -104,7 +104,7 @@ class UserSignupResource(Resource):
             firstname=data['firstname'],
             lastname=data['lastname'],
             email=data['email'],
-            image_url=data['image_url'] if json_input.get('image_url') else "https://pixabay.com/en/blank-profile-picture-mystery-man-973461/",
+            image_url=data['image_url'] if json_input.get('image_url') else "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973461_1280.png",
         )
         new_user.save()
 
