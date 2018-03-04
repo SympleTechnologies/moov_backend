@@ -14,13 +14,13 @@ try:
     from api.v1.views.route import RouteResource
     from api.v1.views.user import UserResource, UserSignupResource, UserLoginResource
     from api.v1.views.profile_page import BasicInfoResource
-    from api.v1.views.transaction import TransactionResource
+    from api.v1.views.transaction import TransactionResource, AllTransactionsResource
 except ImportError:
     from moov_backend.config import app_configuration
     from moov_backend.api.v1.views.route import RouteResource
     from moov_backend.api.v1.views.user import UserResource, UserSignupResource, UserLoginResource
     from moov_backend.api.v1.views.profile_page import BasicInfoResource
-    from moov_backend.api.v1.views.transaction import TransactionResource
+    from moov_backend.api.v1.views.transaction import TransactionResource, AllTransactionsResource
 
 
 dotenv_path = join(dirname(__file__), '.env')
@@ -73,7 +73,8 @@ def create_flask_app(environment):
     api.add_resource(UserLoginResource, '/api/v1/login', '/api/v1/login/', endpoint='login_user')
 
     # Transaction routes
-    api.add_resource(TransactionResource, '/api/v1/transaction', '/api/v1/transaction/', endpoint='transaction_route')
+    api.add_resource(TransactionResource, '/api/v1/transaction', '/api/v1/transaction/', endpoint='single_transaction')
+    api.add_resource(TransactionResource, '/api/v1/all-transactions', '/api/v1/all-transactions/', endpoint='all_transactions')
 
     # Profile Page routes
     api.add_resource(BasicInfoResource, '/api/v1/basic_info', '/api/v1/basic_info/', endpoint='user_basic_info')

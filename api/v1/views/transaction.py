@@ -180,11 +180,13 @@ class TransactionResource(Resource):
                 new_transaction.save()
 
                 # wallet updates
-                _receiver_wallet.wallet_amount = receiver_amount_after_transaction
+                # DO NOT CHANGE THE SEQUENCE OF THE CODE BELOW
+                # IT PREVENTS HACK
                 _sender_wallet.wallet_amount = sender_amount_after_transaction
+                _receiver_wallet.wallet_amount = receiver_amount_after_transaction
                 moov_wallet.wallet_amount += transfer_charge
-                _receiver_wallet.save()
                 _sender_wallet.save()
+                _receiver_wallet.save()
                 moov_wallet.save()
 
                 notification_user_sender_message = "Your wallet has been debited with N{0}, with a transaction charge of N{1} by {2}".format(cost_of_transaction, transfer_charge, "MOOV")
@@ -283,3 +285,8 @@ class TransactionResource(Resource):
 
         # cases that don't meet the required condition
         return moov_errors("Transaction denied", 400) 
+
+class AllTransactionsResource(Resource):
+    
+    def get(self):
+        pass
