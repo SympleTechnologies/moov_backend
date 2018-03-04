@@ -6,14 +6,14 @@ from flask_jwt import jwt
 
 # define a user class
 class CurrentUser(object):
-    def __init__(self, user_id, exp):
+    def __init__(self, user_id, stamp):
         self.id = user_id
-        self.exp = exp
+        self.stamp = stamp
 
     def __repr__(self):
         return ("<CurrentUser \n"
                 "id - {} \n"
-                "exp - {} >").format(self.id, self.exp)
+                "stamp - {} >").format(self.id, self.stamp)
 
 # authorization decorator
 def token_required(f):
@@ -76,12 +76,12 @@ def token_required(f):
         payload_keys = [str(key) for key in payload.keys()]
         
         # confirm that payload has required keys
-        if not {"id", "exp"}.issubset(payload_keys):
+        if not {"id", "stamp"}.issubset(payload_keys):
             return unauthorized_response
         else:
             # instantiate user object
             current_user = CurrentUser(
-                    str(payload["id"]), str(payload["exp"])
+                    str(payload["id"]), str(payload["stamp"])
                 )
 
             # set current user in flask global variable, g

@@ -2,17 +2,18 @@ import os
 
 from flask import g, request, jsonify
 from flask_restful import Resource
+from sqlalchemy import desc
 
 try:
     from ...auth.token import token_required
     from ...helper.error_message import moov_errors
-    from ...models import User
-    from ...schema import user_schema
+    from ...models import User, Notification
+    from ...schema import user_schema, notification_schema
 except ImportError:
     from moov_backend.api.auth.token import token_required
     from moov_backend.api.helper.error_message import moov_errors
-    from moov_backend.api.models import User
-    from moov_backend.api.schema import user_schema
+    from moov_backend.api.models import User, Notification
+    from moov_backend.api.schema import user_schema, notification_schema
 
 
 class BasicInfoResource(Resource):
@@ -25,16 +26,24 @@ class BasicInfoResource(Resource):
         if not _user:
             return moov_errors('User does not exist', 404)
 
+        _notifications = Notification.query.filter(Notification.recipient_id==_user.id).order_by(desc(Notification.created_at)).limit(20).all()
+        _notifications_data = []
+        if _notifications:
+            for _notification in _notifications:
+                _notification_to_append, _ = notification_schema.dump(_notification)
+                _notifications_data.append(_notification_to_append)
+
         _user_type = (_user.user_type.title).lower()
         if _user_type == "admin":
             return moov_errors('Unauthorized access', 401)
 
-        _data, _ = user_schema.dump(_user)
-        _data["user_type"] = _user_type
+        _user_data, _ = user_schema.dump(_user)
+        _user_data["user_type"] = _user_type
 
         return jsonify({"status": "success",
                         "data": {
                             "message": "Basic information successfully retrieved",
-                            "basic_info": _data
+                            "user": _user_data,
+                            "notifications": _notifications_data
                         }
                     })

@@ -11,14 +11,14 @@ from flask_jwt import jwt
 try:
     from ...auth.token import token_required
     from ...auth.validation import validate_request, validate_input_data
-    from ...helper.error_message import moov_errors
-    from ...models import User, UserType, Wallet, Transaction
+    from ...helper.error_message import moov_errors, not_found_errors
+    from ...models import User, UserType, Wallet, Transaction, Notification
     from ...schema import user_schema, user_login_schema
 except ImportError:
     from moov_backend.api.auth.token import token_required
     from moov_backend.api.auth.validation import validate_request, validate_input_data
-    from moov_backend.api.helper.error_message import moov_errors
-    from moov_backend.api.models import User, UserType, Wallet, Transaction
+    from moov_backend.api.helper.error_message import moov_errors, not_found_errors
+    from moov_backend.api.models import User, UserType, Wallet, Transaction, Notification
     from moov_backend.api.schema import user_schema, user_login_schema
 
 
@@ -98,6 +98,11 @@ class UserSignupResource(Resource):
             return moov_errors("Unauthorized, you cannot create a/an {0}".format(data['user_type']), 401)
         if not user_type_id:
             return moov_errors("User type can only be student or driver", 400)
+
+        moov_email = os.environ.get("MOOV_EMAIL")
+        moov_user = User.query.filter(User.email==moov_email).first()
+        if not moov_user:
+            return not_found_errors(moov_email)
             
         new_user = User(
             user_type_id=user_type_id,
@@ -115,10 +120,17 @@ class UserSignupResource(Resource):
         )
         user_wallet.save()
 
-        exp_date = datetime.datetime.utcnow()
+        user_notification = Notification(
+            message="Welcome to MOOV app.",
+            recipient_id=new_user.id,
+            sender_id=moov_user.id
+        )
+        user_notification.save()
+
+        token_date = datetime.datetime.utcnow()
         payload = {
                     "id": new_user.id,
-                    "exp": exp_date + datetime.timedelta(days=3)
+                    "stamp": str(token_date)
                 }
         _token = jwt.encode(payload, os.getenv("TOKEN_KEY"), algorithm='HS256')
 
@@ -157,10 +169,10 @@ class UserLoginResource(Resource):
 
         _user_wallet = Wallet.query.filter(Wallet.user_id==_user.id).first()
 
-        exp_date = datetime.datetime.utcnow()
+        token_date = datetime.datetime.utcnow()
         payload = {
                     "id": _user.id,
-                    "exp": exp_date + datetime.timedelta(days=3)
+                    "stamp": str(token_date)
                 }
         _token = jwt.encode(payload, os.getenv("TOKEN_KEY"), algorithm='HS256')
 
