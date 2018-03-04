@@ -80,6 +80,8 @@ class OperationType(enum.Enum):
     transfer_type = "transfer"
     wallet_type = "load_wallet"
     ride_type = "ride_fare"
+    borrow_type = "borrow_me"
+    cancel_type = "cancel_ride"
 
 
 class TransactionType(enum.Enum):
@@ -98,9 +100,15 @@ class User(db.Model, ModelViewsMix):
     lastname = db.Column(db.String(30), nullable=False)
     email = db.Column(db.String(50), unique=True, nullable=False)
     image_url = db.Column(db.String)
+    mobile_number = db.Column(db.String)
     authorization_code = db.Column(db.String, unique=True)
     authorization_code_status = db.Column(db.Boolean, default=False)
+    number_of_rides = db.Column(db.Integer, default=0)
     wallet = db.relationship('Wallet', cascade="all,delete-orphan", backref='user_wallet', lazy='dynamic')
+    free_ride = db.relationship('FreeRide', cascade="all,delete-orphan", backref='user_free_ride', lazy='dynamic')
+    driver_info = db.relationship('DriveInfo', cascade="all,delete-orphan", backref='driver_information', lazy='dynamic')
+    school_info = db.relationship('SchoolInfo', cascade="all,delete-orphan", backref='school_information', lazy='dynamic')
+    admission_type = db.relationship('AdmissionType', cascade="all,delete-orphan", backref='school_admission_type', lazy='dynamic')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -126,6 +134,79 @@ class UserType(db.Model, ModelViewsMix):
 
     def __repr__(self):
         return '<UserType %r>' % (self.title)
+
+
+class FreeRide(db.Model, ModelViewsMix):
+    
+    __tablename__ = 'FreeRide'
+
+    id = db.Column(db.String, primary_key=True)
+    token = db.Column(db.String, unique=True)
+    rides_had = db.Column(db.Integer, default=0)
+    token_status = db.Column(db.Boolean, default=False)
+    description = db.Column(db.String, nullable=True)
+    user_id = db.Column(db.String(), db.ForeignKey('User.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return '<FreeRide %r>' % (self.user_id)
+
+
+class DriverInfo(db.Model, ModelViewsMix):
+    
+    __tablename__ = 'DriverInfo'
+
+    id = db.Column(db.String, primary_key=True)
+    car_model = db.Column(db.String)
+    left_image = db.Column(db.String)
+    right_image = db.Column(db.String)
+    front_image = db.Column(db.String)
+    back_image = db.Column(db.String)
+    plate_number = db.Column(db.String)
+    admin_confirmed = db.Column(db.Boolean, default=False)
+    bank_name = db.Column(db.String)
+    account_number = db.Column(db.String)
+    driver_id = db.Column(db.String(), db.ForeignKey('User.id'), unique=True)
+    admission_type_id = db.Column(db.String(), db.ForeignKey('AdmissionType.id'))
+    number_of_rides = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return '<DriverInfo %r>' % (self.driver_id)
+
+
+class SchoolInfo(db.Model, ModelViewsMix):
+    
+    __tablename__ = "SchoolInfo"
+
+    id = db.Column(db.String, primary_key=True)
+    school_id = db.Column(db.String(), db.ForeignKey('User.id'), unique=True)
+    account_number = db.Column(db.String)
+    bank_name = db.Column(db.String)
+    mobile_number = db.Column(db.String)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return '<SchoolInfo %r>' % (self.school_id)
+
+
+class AdmissionType(db.Model, ModelViewsMix):
+    
+    __tablename__ = "AdmissionType"
+
+    id = db.Column(db.String, primary_key=True)
+    admission_type = db.Column(db.String, unique=True)
+    description = db.Column(db.String)
+    school_id = db.Column(db.String(), db.ForeignKey('User.id'), unique=True)
+    driver_info = db.relationship('DriveInfo', cascade="all,delete-orphan", backref='driver_information', lazy='dynamic')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return '<AdmissionType %r>' % (self.admission_type)
 
 
 class PercentagePrice(db.Model, ModelViewsMix):
