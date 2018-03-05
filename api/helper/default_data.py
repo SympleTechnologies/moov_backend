@@ -1,6 +1,6 @@
 import os
 
-from ..models import User, UserType, PercentagePrice, Wallet
+from ..models import User, UserType, PercentagePrice, Wallet, AdmissionType, Icon
 
 def create_default_user_types():
     user_types = ['admin', 'driver', 'student', 'moov', 'school', 'car_owner']
@@ -24,8 +24,8 @@ def create_user(user_type_id, name, email):
 
 def create_percentage_price(title, price, description):
     new_percentage_price = PercentagePrice(
-                                title= title,
-                                price= price,
+                                title=title,
+                                price=price,
                                 description= "{0}'s percentage price".format(description)        
                             )
     return new_percentage_price.save()
@@ -37,3 +37,17 @@ def create_wallet(user_id, wallet_amount, description):
                     description= description
                 )
     return new_wallet.save()
+
+def create_admission_type():
+    new_admission_type = AdmissionType(
+                            admission_type="freelance",
+                            description="default admission type"
+                        )
+    return new_admission_type.save()
+
+def create_icon(icon, operation_type):
+    new_icon = Icon(
+                    icon=icon,
+                    operation_type=operation_type
+                )
+    return new_icon.save()

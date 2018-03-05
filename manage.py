@@ -9,13 +9,13 @@ from main import create_flask_app
 try:
     from api.helper.default_data import (
         create_user, create_default_user_types, create_percentage_price,
-        create_wallet
+        create_wallet, create_admission_type, create_icon
     )
     from api.models import db, UserType, User, Wallet
 except ImportError:
     from moov_backend.api.helper.default_data import (
         create_user, create_default_user_types, create_percentage_price,
-        create_wallet
+        create_wallet, create_admission_type, create_icon
     )
     from moov_backend.api.models import db, UserType, User, Wallet
 
@@ -83,11 +83,23 @@ def seed_default_data(prompt=True):
                 create_wallet(user_id=car_owner.id, wallet_amount=wallet_amount, description="Car Owner Wallet")
 
                 # seed percentage prices
-                create_percentage_price(title="car_owner@email.com", price=0.0, description="Car owner")
-                create_percentage_price(title="school@email.com", price=0.2, description="School")
+                create_percentage_price(title="car_owner@email.com", price=0.1, description="Car owner")
+                create_percentage_price(title="school@email.com", price=0.1, description="School")
                 create_percentage_price(title="driver", price=0.4, description="Driver")
                 create_percentage_price(title="moov", price=0.4, description="Moov")
-                create_percentage_price(title="transfer", price=0.02, description="Transfer")
+                create_percentage_price(title="transfer", price=0.0, description="Transfer")
+
+                # seed default admission type
+                create_admission_type()
+
+                # seed default icons
+                default_icon = "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973461_1280.png"
+                create_icon(icon=default_icon, operation_type="transfer_operation")
+                create_icon(icon=default_icon, operation_type="borrow_operation")
+                create_icon(icon=default_icon, operation_type="cancel_operation")
+                create_icon(icon=default_icon, operation_type="load_wallet_operation")
+                create_icon(icon=default_icon, operation_type="ride_operation")
+                create_icon(icon=default_icon, operation_type="moov_operation")
 
                 message = "\n\n\tYay *\(^o^)/* \n\n Your database has been succesfully seeded !!! \n\n\t *\(@^_^@)/* <3 <3 \n\n"
             except SQLAlchemyError as error:

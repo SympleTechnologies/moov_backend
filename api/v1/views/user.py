@@ -12,13 +12,13 @@ try:
     from ...auth.token import token_required
     from ...auth.validation import validate_request, validate_input_data
     from ...helper.error_message import moov_errors, not_found_errors
-    from ...models import User, UserType, Wallet, Transaction, Notification
+    from ...models import User, UserType, Wallet, Transaction, Notification, Icon
     from ...schema import user_schema, user_login_schema
 except ImportError:
     from moov_backend.api.auth.token import token_required
     from moov_backend.api.auth.validation import validate_request, validate_input_data
     from moov_backend.api.helper.error_message import moov_errors, not_found_errors
-    from moov_backend.api.models import User, UserType, Wallet, Transaction, Notification
+    from moov_backend.api.models import User, UserType, Wallet, Transaction, Notification, Icon
     from moov_backend.api.schema import user_schema, user_login_schema
 
 
@@ -103,6 +103,11 @@ class UserSignupResource(Resource):
         moov_user = User.query.filter(User.email==moov_email).first()
         if not moov_user:
             return not_found_errors(moov_email)
+
+        _transaction_icon = "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973461_1280.png"
+        transaction_icon = Icon.query.filter(Icon.operation_type=="moov_operation").first()
+        if transaction_icon:
+            _transaction_icon_id = transaction_icon.id
             
         new_user = User(
             user_type_id=user_type_id,
@@ -123,7 +128,8 @@ class UserSignupResource(Resource):
         user_notification = Notification(
             message="Welcome to MOOV app.",
             recipient_id=new_user.id,
-            sender_id=moov_user.id
+            sender_id=moov_user.id,
+            transaction_icon_id=_transaction_icon_id
         )
         user_notification.save()
 

@@ -91,6 +91,7 @@ class TransactionSchema(Schema):
 class NotificationSchema(Schema):
     id = fields.Str(dump_only=True)
     message = fields.Str(errors={'type': 'Invalid type'})
+    transaction_icon = fields.Str(errors={'type': 'Invalid type'})
     recipient_id = fields.Str(errors={'type': 'Invalid type'})
     sender_id = fields.Str(errors={'type': 'Invalid type'})
     created_at = fields.DateTime(dump_only=True)

@@ -16,7 +16,7 @@ try:
     )
     from ...models import (
         User, Transaction, Wallet, Notification, TransactionType, 
-        OperationType
+        OperationType, Icon
     )
     from ...schema import transaction_schema
 except ImportError:
@@ -32,7 +32,7 @@ except ImportError:
     )
     from moov_backend.api.models import (
         User, Transaction, Wallet, Notification, TransactionType, 
-        OperationType
+        OperationType, Icon
     )
     from moov_backend.api.schema import transaction_schema
 
@@ -64,6 +64,8 @@ class TransactionResource(Resource):
         _current_user_type = (_current_user.user_type.title).lower()
         if _current_user_type == "admin":
             return moov_errors('Unauthorized access', 401)
+
+        _transaction_icon = "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973461_1280.png"
 
         moov_email = os.environ.get("MOOV_EMAIL")
         moov_user = User.query.filter(User.email==moov_email).first()
@@ -103,8 +105,11 @@ class TransactionResource(Resource):
             _receiver_wallet.wallet_amount = receiver_amount_after_transaction
             _receiver_wallet.save()
 
+            transaction_icon = Icon.query.filter(Icon.operation_type=="load_wallet_operation").first()
+            if transaction_icon:
+                _transaction_icon_id = transaction_icon.id
             notification_message = "Your wallet has been credited with N{0} with a transaction charge of N{1}".format(new_cost_of_transaction, paystack_deduction)
-            save_notification(recipient_id=receiver_id, sender_id=moov_user.id, message=notification_message)
+            save_notification(recipient_id=receiver_id, sender_id=moov_user.id, message=notification_message, transaction_icon_id=_transaction_icon_id)
 
             _data, _ = transaction_schema.dump(new_transaction)
             return {
@@ -189,10 +194,14 @@ class TransactionResource(Resource):
                 _receiver_wallet.save()
                 moov_wallet.save()
 
+                transaction_icon = Icon.query.filter(Icon.operation_type=="transfer_operation").first()
+                if transaction_icon:
+                    _transaction_icon_id = transaction_icon.id
+
                 notification_user_sender_message = "Your wallet has been debited with N{0}, with a transaction charge of N{1} by {2}".format(cost_of_transaction, transfer_charge, "MOOV")
                 notification_user_receiver_message = "Your wallet has been credited with N{0} by {1}".format(cost_of_transaction, (str(_sender.firstname)).title())
-                save_notification(recipient_id=_sender.id, sender_id=moov_user.id, message=notification_user_sender_message)
-                save_notification(recipient_id=_receiver.id, sender_id=moov_user.id, message=notification_user_receiver_message)
+                save_notification(recipient_id=_sender.id, sender_id=moov_user.id, message=notification_user_sender_message, transaction_icon_id=_transaction_icon_id)
+                save_notification(recipient_id=_receiver.id, sender_id=moov_user.id, message=notification_user_receiver_message, transaction_icon_id=_transaction_icon_id)
 
                 _data, _ = transaction_schema.dump(new_transaction)
                 return {
@@ -269,10 +278,14 @@ class TransactionResource(Resource):
                 _receiver_wallet.save()
                 _sender_wallet.save()
 
+                transaction_icon = Icon.query.filter(Icon.operation_type=="ride_operation").first()
+                if transaction_icon:
+                    _transaction_icon_id = transaction_icon.id
+                
                 notification_user_sender_message = "Your wallet has been debited with N{0} for your ride fare with {1}".format(cost_of_transaction, (str(_receiver.firstname)).title())
                 notification_user_receiver_message = "Your wallet has been credited with N{0} by {1}".format(driver_amount, (str(_sender.firstname)).title())
-                save_notification(recipient_id=_sender.id, sender_id=moov_user.id, message=notification_user_sender_message)
-                save_notification(recipient_id=_receiver.id, sender_id=moov_user.id, message=notification_user_receiver_message)
+                save_notification(recipient_id=_sender.id, sender_id=moov_user.id, message=notification_user_sender_message, transaction_icon_id=_transaction_icon_id)
+                save_notification(recipient_id=_receiver.id, sender_id=moov_user.id, message=notification_user_receiver_message, transaction_icon_id=_transaction_icon_id)
 
                 _data, _ = transaction_schema.dump(new_transaction)
                 return {

@@ -31,6 +31,9 @@ class BasicInfoResource(Resource):
         if _notifications:
             for _notification in _notifications:
                 _notification_to_append, _ = notification_schema.dump(_notification)
+                _notification_to_append["icon"] = ""
+                if _notification.transaction_icon_id:
+                    _notification_to_append["icon"] = str(_notification.notification_icon.icon)
                 _notifications_data.append(_notification_to_append)
 
         _user_type = (_user.user_type.title).lower()

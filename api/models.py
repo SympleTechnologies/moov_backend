@@ -106,7 +106,7 @@ class User(db.Model, ModelViewsMix):
     number_of_rides = db.Column(db.Integer, default=0)
     wallet = db.relationship('Wallet', cascade="all,delete-orphan", backref='user_wallet', lazy='dynamic')
     free_ride = db.relationship('FreeRide', cascade="all,delete-orphan", backref='user_free_ride', lazy='dynamic')
-    driver_info = db.relationship('DriveInfo', cascade="all,delete-orphan", backref='driver_information', lazy='dynamic')
+    driver_info = db.relationship('DriverInfo', cascade="all,delete-orphan", backref='driver_information', lazy='dynamic')
     school_info = db.relationship('SchoolInfo', cascade="all,delete-orphan", backref='school_information', lazy='dynamic')
     admission_type = db.relationship('AdmissionType', cascade="all,delete-orphan", backref='school_admission_type', lazy='dynamic')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -201,7 +201,7 @@ class AdmissionType(db.Model, ModelViewsMix):
     admission_type = db.Column(db.String, unique=True)
     description = db.Column(db.String)
     school_id = db.Column(db.String(), db.ForeignKey('User.id'), unique=True)
-    driver_info = db.relationship('DriveInfo', cascade="all,delete-orphan", backref='driver_information', lazy='dynamic')
+    driver_info = db.relationship('DriverInfo', cascade="all,delete-orphan", backref='admission_driver_info', lazy='dynamic')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -269,6 +269,19 @@ class Transaction(db.Model, ModelViewsMix):
         return '<Transaction %r %r>' % (self.receiver_id, self.transaction_detail)
 
 
+class Icon(db.Model, ModelViewsMix):
+    
+    __tablename__ = "Icon"
+
+    id = db.Column(db.String, primary_key=True)
+    icon = db.Column(db.String, nullable=False)
+    operation_type = db.Column(db.String, nullable=False, unique=True)
+    notifications = db.relationship('Notification', cascade="all,delete-orphan", backref='notification_icon', lazy='dynamic')
+
+    def __repr__(self):
+        return '<Icon %r>' % (self.operation_type)
+
+
 class Notification(db.Model, ModelViewsMix):
     
     __tablename__ = 'Notification'
@@ -277,13 +290,14 @@ class Notification(db.Model, ModelViewsMix):
     message = db.Column(db.String)
     recipient_id = db.Column(db.String(), db.ForeignKey('User.id'))
     sender_id = db.Column(db.String(), db.ForeignKey('User.id'))
+    transaction_icon_id = db.Column(db.String(), db.ForeignKey('Icon.id'))
     recipient = relationship("User", cascade="all,delete-orphan", single_parent=True, foreign_keys=[recipient_id])
     sender = relationship("User", cascade="all,delete-orphan", single_parent=True, foreign_keys=[sender_id])
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def __repr__(self):
-        return '<Transaction %r %r>' % (self.message)
+        return '<Notification %r>' % (self.message)
 
 
 def fancy_id_generator(mapper, connection, target):
