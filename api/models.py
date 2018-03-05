@@ -309,7 +309,19 @@ def fancy_id_generator(mapper, connection, target):
 
 # associate the listener function with models, to execute during the
 # "before_insert" event
-tables = [User, UserType, Wallet, Transaction, Notification, PercentagePrice]
+tables = [
+            User, 
+            UserType, 
+            Wallet, 
+            Transaction, 
+            Notification, 
+            PercentagePrice,
+            AdmissionType,
+            Icon,
+            SchoolInfo,
+            DriverInfo,
+            FreeRide
+        ]
 
 for table in tables:
     event.listen(table, 'before_insert', fancy_id_generator)
