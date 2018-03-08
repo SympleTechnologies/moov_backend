@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from flask import g, request, jsonify
 from flask_restful import Resource
@@ -6,16 +7,19 @@ from flask_restful import Resource
 try:
     from ...auth.token import token_required
     from ...auth.validation import validate_request, validate_input_data
+    from ...generator.free_ride_token_generator import generate_free_ride_token
     from ...helper.error_message import moov_errors, not_found_errors
     from ...helper.user_helper import get_user
     from ...helper.wallet_helper import get_wallet
     from ...helper.percentage_price_helper import get_percentage_price
+    from ...helper.notification_helper import save_notification
+    from ...helper.free_ride_helper import get_free_ride_token, save_free_ride_token
     from ...helper.transactions_helper import (
         paystack_deduction_amount, check_transaction_validity, load_wallet_operation,
-        ride_fare_operation, transfer_operation, check_past_week_rides
+        ride_fare_operation, transfer_operation
     )
     from ...models import (
-        User, Transaction, Wallet
+        User, Transaction, Wallet, Icon
     )
     from ...schema import transaction_schema
 except ImportError:
@@ -25,12 +29,14 @@ except ImportError:
     from moov_backend.api.helper.user_helper import get_user
     from moov_backend.api.helper.wallet_helper import get_wallet
     from moov_backend.api.helper.percentage_price_helper import get_percentage_price
+    from moov_backend.api.helper.notification_helper import save_notification
+    from moov_backend.api.helper.free_ride_helper import get_free_ride_token, save_free_ride_token
     from moov_backend.api.helper.transactions_helper import (
         paystack_deduction_amount, check_transaction_validity, load_wallet_operation,
-        ride_fare_operation, transfer_operation, check_past_week_rides
+        ride_fare_operation, transfer_operation
     )
     from moov_backend.api.models import (
-        User, Transaction, Wallet
+        User, Transaction, Wallet, Icon
     )
     from moov_backend.api.schema import transaction_schema
 
@@ -155,6 +161,9 @@ class TransactionResource(Resource):
                  
             # case ride_fare
             if str(json_input['type_of_operation']).lower() == 'ride_fare':
+                # increments the number of rides taken by a user
+                _sender.number_of_rides += 1
+
                 if "school_email" not in json_input:
                     return moov_errors("school_email field is compulsory for ride fare", 400)
 
@@ -184,8 +193,27 @@ class TransactionResource(Resource):
                 if not car_owner_percentage_price_info or not school_percentage_price_info:
                     return moov_errors("Percentage price was not set for the school or car_owner ({0}, {1})".format(school_email, car_owner_email), 400)
 
-                number_of_rides = check_past_week_rides(_sender_id)
+                # free ride generation
+                free_ride_token = get_free_ride_token(_sender)
+                if free_ride_token:
+                    free_ride_description = "Token generated for {0} on the {1} for ride number {2}".format(
+                                                _sender.email, str(datetime.now()), _sender.number_of_rides
+                                            )
+                    save_free_ride_token(
+                        token=free_ride_token, 
+                        description=free_ride_description, 
+                        user_id=_sender_id
+                    )
 
+                    free_ride_icon = Icon.query.filter(Icon.operation_type=="free_ride_operation").first()
+                    free_ride_notification_message = "You have earned a free ride token '{0}'".format(free_ride_token)
+                    save_notification(
+                        recipient_id=_sender_id, 
+                        sender_id=moov_user.id, 
+                        message=free_ride_notification_message, 
+                        transaction_icon_id=free_ride_icon.id
+                    )
+                
                 _data, _ = ride_fare_operation(
                                 _sender, 
                                 _receiver, 
@@ -203,6 +231,7 @@ class TransactionResource(Resource):
                                 _receiver_wallet, 
                                 moov_user
                             )
+                _data["free_ride_token"] = free_ride_token
                 return {
                         'status': 'success',
                         'data': {
