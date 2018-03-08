@@ -145,7 +145,7 @@ class FreeRide(db.Model, ModelViewsMix):
     rides_had = db.Column(db.Integer, default=0)
     token_status = db.Column(db.Boolean, default=False)
     description = db.Column(db.String, nullable=True)
-    user_id = db.Column(db.String(), db.ForeignKey('User.id'))
+    user_id = db.Column(db.String(), db.ForeignKey('User.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

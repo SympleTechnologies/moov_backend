@@ -9,14 +9,13 @@ try:
     from ...helper.error_message import moov_errors, not_found_errors
     from ...helper.user_helper import get_user
     from ...helper.wallet_helper import get_wallet
-    from ...helper.notification_helper import save_notification
     from ...helper.percentage_price_helper import get_percentage_price
     from ...helper.transactions_helper import (
-        paystack_deduction_amount, check_transaction_validity
+        paystack_deduction_amount, check_transaction_validity, load_wallet_operation,
+        ride_fare_operation, transfer_operation, check_past_week_rides
     )
     from ...models import (
-        User, Transaction, Wallet, Notification, TransactionType, 
-        OperationType, Icon
+        User, Transaction, Wallet
     )
     from ...schema import transaction_schema
 except ImportError:
@@ -25,14 +24,13 @@ except ImportError:
     from moov_backend.api.helper.error_message import moov_errors, not_found_errors
     from moov_backend.api.helper.user_helper import get_user
     from moov_backend.api.helper.wallet_helper import get_wallet
-    from moov_backend.api.helper.notification_helper import save_notification
     from moov_backend.api.helper.percentage_price_helper import get_percentage_price
     from moov_backend.api.helper.transactions_helper import (
-        paystack_deduction_amount, check_transaction_validity
+        paystack_deduction_amount, check_transaction_validity, load_wallet_operation,
+        ride_fare_operation, transfer_operation, check_past_week_rides
     )
     from moov_backend.api.models import (
-        User, Transaction, Wallet, Notification, TransactionType, 
-        OperationType, Icon
+        User, Transaction, Wallet
     )
     from moov_backend.api.schema import transaction_schema
 
@@ -74,44 +72,13 @@ class TransactionResource(Resource):
 
         # case load_wallet
         if str(json_input['type_of_operation']).lower() == 'load_wallet':
-            _receiver_wallet = Wallet.query.filter(Wallet.user_id==_current_user_id).first()
             cost_of_transaction = json_input["cost_of_transaction"]
 
             message = "Cost of transaction cannot be a negative value"
             if check_transaction_validity(cost_of_transaction, message):
                 return check_transaction_validity(cost_of_transaction, message)
             
-            paystack_deduction = paystack_deduction_amount(cost_of_transaction)
-            receiver_amount_before_transaction = _receiver_wallet.wallet_amount
-            new_cost_of_transaction = cost_of_transaction - paystack_deduction
-            receiver_amount_after_transaction = receiver_amount_before_transaction + new_cost_of_transaction
-            receiver_id = _current_user_id
-            receiver_wallet_id = _receiver_wallet.id
-            transaction_detail = "{0}'s wallet has been credited with {1} with a paystack deduction of {2}".format(_current_user.firstname, new_cost_of_transaction, paystack_deduction)
-
-            new_transaction = Transaction(
-                transaction_detail= transaction_detail,
-                type_of_operation= OperationType.wallet_type,
-                type_of_transaction= TransactionType.credit_type,
-                cost_of_transaction= cost_of_transaction,
-                receiver_amount_before_transaction= receiver_amount_before_transaction,
-                receiver_amount_after_transaction= receiver_amount_after_transaction,
-                paystack_deduction= paystack_deduction,
-                receiver_id= receiver_id,
-                receiver_wallet_id= receiver_wallet_id
-            )
-            new_transaction.save()
-
-            _receiver_wallet.wallet_amount = receiver_amount_after_transaction
-            _receiver_wallet.save()
-
-            transaction_icon = Icon.query.filter(Icon.operation_type=="load_wallet_operation").first()
-            if transaction_icon:
-                _transaction_icon_id = transaction_icon.id
-            notification_message = "Your wallet has been credited with N{0} with a transaction charge of N{1}".format(new_cost_of_transaction, paystack_deduction)
-            save_notification(recipient_id=receiver_id, sender_id=moov_user.id, message=notification_message, transaction_icon_id=_transaction_icon_id)
-
-            _data, _ = transaction_schema.dump(new_transaction)
+            _data, _ = load_wallet_operation(cost_of_transaction, _current_user, _current_user_id, moov_user)
             return {
                     'status': 'success',
                     'data': {
@@ -127,7 +94,6 @@ class TransactionResource(Resource):
             _sender_id = _current_user_id
             _sender = _current_user
             _receiver = User.query.filter(User.email==_receiver_id).first()
-            new_transaction = {}
 
             if not _receiver:
                 return moov_errors("User does not exist", 404)
@@ -157,9 +123,7 @@ class TransactionResource(Resource):
                 
                 transfer_percentage_price = (get_percentage_price(title="transfer")).price
                 transfer_charge = transfer_percentage_price * cost_of_transaction
-                receiver_amount_after_transaction = _receiver_wallet.wallet_amount + cost_of_transaction
                 sender_amount_after_transaction = _sender_wallet.wallet_amount - cost_of_transaction - transfer_charge
-                transaction_detail = "{0} transfered N{1} to {2} with a transaction charge of {3}".format(_sender.email, cost_of_transaction, _receiver.email, transfer_charge)
 
                 if check_transaction_validity(sender_amount_after_transaction, message):
                   return check_transaction_validity(sender_amount_after_transaction, message)
@@ -168,42 +132,19 @@ class TransactionResource(Resource):
                 if not moov_wallet:
                     return not_found_errors(moov_email)
 
-                new_transaction = Transaction(
-                    transaction_detail= transaction_detail,
-                    type_of_operation= OperationType.transfer_type,
-                    type_of_transaction= TransactionType.both_types,
-                    cost_of_transaction= cost_of_transaction,
-                    receiver_amount_before_transaction= receiver_amount_before_transaction,
-                    receiver_amount_after_transaction= receiver_amount_after_transaction,
-                    sender_amount_before_transaction= sender_amount_before_transaction,
-                    sender_amount_after_transaction= sender_amount_after_transaction,
-                    receiver_id= _receiver.id,
-                    sender_id= _sender.id,
-                    receiver_wallet_id= _receiver_wallet.id,
-                    sender_wallet_id= _sender_wallet.id
-                )
-                new_transaction.save()
-
-                # wallet updates
-                # DO NOT CHANGE THE SEQUENCE OF THE CODE BELOW
-                # IT PREVENTS HACK
-                _sender_wallet.wallet_amount = sender_amount_after_transaction
-                _receiver_wallet.wallet_amount = receiver_amount_after_transaction
-                moov_wallet.wallet_amount += transfer_charge
-                _sender_wallet.save()
-                _receiver_wallet.save()
-                moov_wallet.save()
-
-                transaction_icon = Icon.query.filter(Icon.operation_type=="transfer_operation").first()
-                if transaction_icon:
-                    _transaction_icon_id = transaction_icon.id
-
-                notification_user_sender_message = "Your wallet has been debited with N{0}, with a transaction charge of N{1} by {2}".format(cost_of_transaction, transfer_charge, "MOOV")
-                notification_user_receiver_message = "Your wallet has been credited with N{0} by {1}".format(cost_of_transaction, (str(_sender.firstname)).title())
-                save_notification(recipient_id=_sender.id, sender_id=moov_user.id, message=notification_user_sender_message, transaction_icon_id=_transaction_icon_id)
-                save_notification(recipient_id=_receiver.id, sender_id=moov_user.id, message=notification_user_receiver_message, transaction_icon_id=_transaction_icon_id)
-
-                _data, _ = transaction_schema.dump(new_transaction)
+                _data, _ = transfer_operation(
+                                _sender, 
+                                _receiver, 
+                                _sender_wallet, 
+                                _receiver_wallet, 
+                                moov_wallet, 
+                                cost_of_transaction, 
+                                transfer_charge, 
+                                sender_amount_before_transaction, 
+                                receiver_amount_before_transaction, 
+                                sender_amount_after_transaction, 
+                                moov_user
+                            )
                 return {
                         'status': 'success',
                         'data': {
@@ -236,7 +177,6 @@ class TransactionResource(Resource):
                 if not car_owner_wallet:
                     return not_found_errors(car_owner_email)
 
-                transaction_detail = "{0} paid N{1} ride fare to {2}".format(_sender.email, cost_of_transaction, _receiver.email)
                 driver_percentage_price_info = get_percentage_price(title="driver")
                 school_percentage_price_info = get_percentage_price(title=school_email)
                 car_owner_percentage_price_info = get_percentage_price(title=car_owner_email)
@@ -244,50 +184,25 @@ class TransactionResource(Resource):
                 if not car_owner_percentage_price_info or not school_percentage_price_info:
                     return moov_errors("Percentage price was not set for the school or car_owner ({0}, {1})".format(school_email, car_owner_email), 400)
 
-                driver_amount = driver_percentage_price_info.price * cost_of_transaction
-                receiver_amount_after_transaction = receiver_amount_before_transaction + driver_amount
-                school_wallet_amount = school_percentage_price_info.price * cost_of_transaction
-                car_owner_wallet_amount = car_owner_percentage_price_info.price * cost_of_transaction
-                moov_wallet_amount = cost_of_transaction - (driver_amount + school_wallet_amount + car_owner_wallet_amount)
-                
-                new_transaction = Transaction(
-                    transaction_detail= transaction_detail,
-                    type_of_operation= OperationType.ride_type,
-                    type_of_transaction= TransactionType.both_types,
-                    cost_of_transaction= cost_of_transaction,
-                    receiver_amount_before_transaction= receiver_amount_before_transaction,
-                    receiver_amount_after_transaction= receiver_amount_after_transaction,
-                    sender_amount_before_transaction= sender_amount_before_transaction,
-                    sender_amount_after_transaction= sender_amount_after_transaction,
-                    receiver_id= _receiver.id,
-                    sender_id= _sender.id,
-                    receiver_wallet_id= _receiver_wallet.id,
-                    sender_wallet_id= _sender_wallet.id
-                )
-                new_transaction.save()
+                number_of_rides = check_past_week_rides(_sender_id)
 
-                # wallet_updates
-                moov_wallet.wallet_amount += moov_wallet_amount
-                school_wallet.wallet_amount += school_wallet_amount
-                car_owner_wallet.wallet_amount += car_owner_wallet_amount
-                _receiver_wallet.wallet_amount = receiver_amount_after_transaction
-                _sender_wallet.wallet_amount = sender_amount_after_transaction
-                moov_wallet.save()
-                school_wallet.save()
-                car_owner_wallet.save()
-                _receiver_wallet.save()
-                _sender_wallet.save()
-
-                transaction_icon = Icon.query.filter(Icon.operation_type=="ride_operation").first()
-                if transaction_icon:
-                    _transaction_icon_id = transaction_icon.id
-                
-                notification_user_sender_message = "Your wallet has been debited with N{0} for your ride fare with {1}".format(cost_of_transaction, (str(_receiver.firstname)).title())
-                notification_user_receiver_message = "Your wallet has been credited with N{0} by {1}".format(driver_amount, (str(_sender.firstname)).title())
-                save_notification(recipient_id=_sender.id, sender_id=moov_user.id, message=notification_user_sender_message, transaction_icon_id=_transaction_icon_id)
-                save_notification(recipient_id=_receiver.id, sender_id=moov_user.id, message=notification_user_receiver_message, transaction_icon_id=_transaction_icon_id)
-
-                _data, _ = transaction_schema.dump(new_transaction)
+                _data, _ = ride_fare_operation(
+                                _sender, 
+                                _receiver, 
+                                driver_percentage_price_info, 
+                                school_percentage_price_info, 
+                                car_owner_percentage_price_info, 
+                                cost_of_transaction, 
+                                receiver_amount_before_transaction, 
+                                sender_amount_before_transaction, 
+                                sender_amount_after_transaction, 
+                                moov_wallet, 
+                                school_wallet, 
+                                car_owner_wallet, 
+                                _sender_wallet, 
+                                _receiver_wallet, 
+                                moov_user
+                            )
                 return {
                         'status': 'success',
                         'data': {
