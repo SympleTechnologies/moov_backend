@@ -142,7 +142,6 @@ class FreeRide(db.Model, ModelViewsMix):
 
     id = db.Column(db.String, primary_key=True)
     token = db.Column(db.String, unique=True)
-    rides_had = db.Column(db.Integer, default=0)
     token_status = db.Column(db.Boolean, default=False)
     description = db.Column(db.String, nullable=True)
     user_id = db.Column(db.String(), db.ForeignKey('User.id'), nullable=False)

@@ -9,14 +9,16 @@ try:
     from ..helper.notification_helper import save_notification
     from ..schema import transaction_schema
     from ..models import (
-        Wallet, Icon, Transaction, OperationType, TransactionType
+        Wallet, Icon, Transaction, OperationType, TransactionType,
+        FreeRide
     )
 except ImportError:
     from moov_backend.api.helper.error_message import moov_errors
     from moov_backend.api.helper.notification_helper import save_notification
     from moov_backend.api.schema import transaction_schema
     from moov_backend.api.models import (
-        Wallet, Icon, Transaction, OperationType, TransactionType
+        Wallet, Icon, Transaction, OperationType, TransactionType,
+        FreeRide
     )
 
 # load-wallet operation function
@@ -188,13 +190,3 @@ def paystack_deduction_amount(cost_of_transaction):
 def check_transaction_validity(amount, message):
     if amount < 0:
         return moov_errors(message, 400)
-
-def check_past_week_rides(user_id):
-    day = datetime.today() - timedelta(days=7)
-    past_week_rides = Transaction(desc(and_(
-                            Transaction.sender_id==user_id,
-                            Transaction.type_of_operation=="ride_type",
-                            Transaction.transaction_date>=day
-                        ))).limit(20).all()
-    import pdb; pdb.set_trace()
-    return len(past_week_rides)
