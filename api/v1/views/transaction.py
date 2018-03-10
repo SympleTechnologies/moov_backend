@@ -16,10 +16,10 @@ try:
     from ...helper.free_ride_helper import get_free_ride_token, save_free_ride_token
     from ...helper.transactions_helper import (
         paystack_deduction_amount, check_transaction_validity, load_wallet_operation,
-        ride_fare_operation, transfer_operation
+        ride_fare_operation, transfer_operation, save_transaction
     )
     from ...models import (
-        User, Transaction, Wallet, Icon
+        User, Transaction, Wallet, Icon, FreeRide, OperationType, TransactionType
     )
     from ...schema import transaction_schema
 except ImportError:
@@ -33,10 +33,10 @@ except ImportError:
     from moov_backend.api.helper.free_ride_helper import get_free_ride_token, save_free_ride_token
     from moov_backend.api.helper.transactions_helper import (
         paystack_deduction_amount, check_transaction_validity, load_wallet_operation,
-        ride_fare_operation, transfer_operation
+        ride_fare_operation, transfer_operation, save_transaction
     )
     from moov_backend.api.models import (
-        User, Transaction, Wallet, Icon
+        User, Transaction, Wallet, Icon, FreeRide, OperationType, TransactionType
     )
     from moov_backend.api.schema import transaction_schema
 
@@ -48,7 +48,7 @@ class TransactionResource(Resource):
     def post(self):
         json_input = request.get_json()
         
-        keys = ['type_of_operation', 'cost_of_transaction', 'user_id', 'school_email', 'car_owner_email']
+        keys = ['type_of_operation', 'cost_of_transaction', 'user_id', 'school_email', 'car_owner_email', 'free_token']
 
         _transaction = {}
         if validate_input_data(json_input, keys, _transaction):
@@ -161,77 +161,134 @@ class TransactionResource(Resource):
                  
             # case ride_fare
             if str(json_input['type_of_operation']).lower() == 'ride_fare':
-                # increments the number of rides taken by a user
-                _sender.number_of_rides += 1
+                _data = {}
+                free_ride_icon = Icon.query.filter(Icon.operation_type=="free_ride_operation").first()
+                if free_ride_icon:
+                    free_ride_icon_id = free_ride_icon.id
 
-                if "school_email" not in json_input:
-                    return moov_errors("school_email field is compulsory for ride fare", 400)
+                if ("free_token" in json_input) and (json_input["free_token"] is not None):
+                    token_valid = FreeRide.query.filter(
+                                    FreeRide.token==json_input["free_token"]
+                                ).first()
 
-                if not get_user(json_input["school_email"]):
-                    return not_found_errors(json_input["school_email"])
+                    # error handlers
+                    if not token_valid:
+                        return moov_errors("{0} is not a valid token".format(json_input["free_token"]), 404)
+                    if not token_valid.token_status:
+                        return moov_errors("{0} has been used".format(json_input["free_token"]), 400)
 
-                school_email = json_input["school_email"]
-                car_owner_email = os.environ.get("CAR_OWNER_EMAIL") if ("car_owner" not in json_input) else json_input["car_owner"]
-                if not get_user(car_owner_email):
-                    return not_found_errors(car_owner_email)
+                    # set the token to false i.e. make it inactive
+                    token_valid.token_status = False
+                    token_valid.save()
 
-                moov_wallet = get_wallet(email=moov_email)
-                school_wallet = get_wallet(email=school_email)
-                car_owner_wallet = get_wallet(email=car_owner_email)
-
-                if not moov_wallet:
-                    return not_found_errors(moov_email)
-                if not school_wallet:
-                    return not_found_errors(school_email)
-                if not car_owner_wallet:
-                    return not_found_errors(car_owner_email)
-
-                driver_percentage_price_info = get_percentage_price(title="driver")
-                school_percentage_price_info = get_percentage_price(title=school_email)
-                car_owner_percentage_price_info = get_percentage_price(title=car_owner_email)
-
-                if not car_owner_percentage_price_info or not school_percentage_price_info:
-                    return moov_errors("Percentage price was not set for the school or car_owner ({0}, {1})".format(school_email, car_owner_email), 400)
-
-                # free ride generation
-                free_ride_token = get_free_ride_token(_sender)
-                if free_ride_token:
-                    free_ride_description = "Token generated for {0} on the {1} for ride number {2}".format(
-                                                _sender.email, str(datetime.now()), _sender.number_of_rides
-                                            )
-                    save_free_ride_token(
-                        token=free_ride_token, 
-                        description=free_ride_description, 
-                        user_id=_sender_id
-                    )
-
-                    free_ride_icon = Icon.query.filter(Icon.operation_type=="free_ride_operation").first()
-                    free_ride_notification_message = "You have earned a free ride token '{0}'".format(free_ride_token)
+                    # save notification
+                    transaction_icon = Icon.query.filter(Icon.operation_type=="ride_operation").first()
+                    if transaction_icon:
+                        _transaction_icon_id = transaction_icon.id
+                    notification_user_sender_message = "Your transaction costs N0, your free token {0} was used".format(json_input["free_token"])
+                    notification_user_receiver_message = "Your transaction with {0} was a free ride".format(str(_sender.firstname).title())
                     save_notification(
-                        recipient_id=_sender_id, 
-                        sender_id=moov_user.id, 
-                        message=free_ride_notification_message, 
-                        transaction_icon_id=free_ride_icon.id
-                    )
-                
-                _data, _ = ride_fare_operation(
-                                _sender, 
-                                _receiver, 
-                                driver_percentage_price_info, 
-                                school_percentage_price_info, 
-                                car_owner_percentage_price_info, 
-                                cost_of_transaction, 
-                                receiver_amount_before_transaction, 
-                                sender_amount_before_transaction, 
-                                sender_amount_after_transaction, 
-                                moov_wallet, 
-                                school_wallet, 
-                                car_owner_wallet, 
-                                _sender_wallet, 
-                                _receiver_wallet, 
-                                moov_user
-                            )
-                _data["free_ride_token"] = free_ride_token
+                            recipient_id=_sender.id, 
+                            sender_id=moov_user.id, 
+                            message=notification_user_sender_message, 
+                            transaction_icon_id=_transaction_icon_id
+                        )
+                    save_notification(
+                            recipient_id=_receiver.id, 
+                            sender_id=moov_user.id, 
+                            message=notification_user_receiver_message, 
+                            transaction_icon_id=_transaction_icon_id
+                        )
+
+                    # save transaction
+                    transaction_detail = "Free ride token {0} was used for this ride transaction".format(json_input["free_token"])
+                    _data, _ = save_transaction(
+                                    transaction_detail=transaction_detail, 
+                                    type_of_operation=OperationType.ride_type, 
+                                    type_of_transaction=TransactionType.both_types, 
+                                    cost_of_transaction=0, 
+                                    _receiver=_receiver, 
+                                    _sender=_sender, 
+                                    _receiver_wallet=_receiver_wallet, 
+                                    _sender_wallet=_sender_wallet, 
+                                    receiver_amount_before_transaction=receiver_amount_before_transaction, 
+                                    sender_amount_before_transaction=sender_amount_before_transaction, 
+                                    receiver_amount_after_transaction=(receiver_amount_before_transaction + 0), 
+                                    sender_amount_after_transaction=(sender_amount_before_transaction+0)
+                                )
+                    _data["free_ride_token"] = ""
+                else:
+                    # increments the number of rides taken by a user
+                    _sender.number_of_rides += 1
+
+                    if "school_email" not in json_input:
+                        return moov_errors("school_email field is compulsory for ride fare", 400)
+
+                    if not get_user(json_input["school_email"]):
+                        return not_found_errors(json_input["school_email"])
+
+                    school_email = json_input["school_email"]
+                    car_owner_email = os.environ.get("CAR_OWNER_EMAIL") if ("car_owner" not in json_input) else json_input["car_owner"]
+                    if not get_user(car_owner_email):
+                        return not_found_errors(car_owner_email)
+
+                    moov_wallet = get_wallet(email=moov_email)
+                    school_wallet = get_wallet(email=school_email)
+                    car_owner_wallet = get_wallet(email=car_owner_email)
+
+                    if not moov_wallet:
+                        return not_found_errors(moov_email)
+                    if not school_wallet:
+                        return not_found_errors(school_email)
+                    if not car_owner_wallet:
+                        return not_found_errors(car_owner_email)
+
+                    driver_percentage_price_info = get_percentage_price(title="driver")
+                    school_percentage_price_info = get_percentage_price(title=school_email)
+                    car_owner_percentage_price_info = get_percentage_price(title=car_owner_email)
+
+                    if not car_owner_percentage_price_info or not school_percentage_price_info:
+                        return moov_errors("Percentage price was not set for the school or car_owner ({0}, {1})".format(school_email, car_owner_email), 400)
+
+                    # free ride generation
+                    free_ride_token = get_free_ride_token(_sender)
+                    if free_ride_token:
+                        free_ride_description = "Token generated for {0} on the {1} for ride number {2}".format(
+                                                    _sender.email, str(datetime.now()), _sender.number_of_rides
+                                                )
+                        save_free_ride_token(
+                            token=free_ride_token, 
+                            description=free_ride_description, 
+                            user_id=_sender_id
+                        )
+
+                        free_ride_notification_message = "You have earned a free ride token '{0}'".format(free_ride_token)
+                        save_notification(
+                            recipient_id=_sender_id, 
+                            sender_id=moov_user.id, 
+                            message=free_ride_notification_message, 
+                            transaction_icon_id=free_ride_icon_id
+                        )
+                    
+                    _data, _ = ride_fare_operation(
+                                    _sender, 
+                                    _receiver, 
+                                    driver_percentage_price_info, 
+                                    school_percentage_price_info, 
+                                    car_owner_percentage_price_info, 
+                                    cost_of_transaction, 
+                                    receiver_amount_before_transaction, 
+                                    sender_amount_before_transaction, 
+                                    sender_amount_after_transaction, 
+                                    moov_wallet, 
+                                    school_wallet, 
+                                    car_owner_wallet, 
+                                    _sender_wallet, 
+                                    _receiver_wallet, 
+                                    moov_user
+                                )
+                    _data["free_ride_token"] = free_ride_token
+    
                 return {
                         'status': 'success',
                         'data': {

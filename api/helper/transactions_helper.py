@@ -176,6 +176,26 @@ def ride_fare_operation(_sender, _receiver, driver_percentage_price_info,
     new_transaction.save()
     return transaction_schema.dump(new_transaction)
 
+def save_transaction(transaction_detail, type_of_operation, type_of_transaction, cost_of_transaction, 
+_receiver, _sender, _receiver_wallet, _sender_wallet, receiver_amount_before_transaction, 
+sender_amount_before_transaction, receiver_amount_after_transaction, sender_amount_after_transaction):
+    new_transaction = Transaction(
+        transaction_detail= transaction_detail,
+        type_of_operation= type_of_operation,
+        type_of_transaction= type_of_transaction,
+        cost_of_transaction= cost_of_transaction,
+        receiver_amount_before_transaction= receiver_amount_before_transaction,
+        receiver_amount_after_transaction= receiver_amount_after_transaction,
+        sender_amount_before_transaction= sender_amount_before_transaction,
+        sender_amount_after_transaction= sender_amount_after_transaction,
+        receiver_id= _receiver.id,
+        sender_id= _sender.id,
+        receiver_wallet_id= _receiver_wallet.id,
+        sender_wallet_id= _sender_wallet.id
+    )
+    new_transaction.save()
+    return transaction_schema.dump(new_transaction)
+
 # paystack deduction calculation
 def paystack_deduction_amount(cost_of_transaction):
     if cost_of_transaction < 2500:
