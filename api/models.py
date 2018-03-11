@@ -92,6 +92,7 @@ class TransactionType(enum.Enum):
 
 class FreeRideType(enum.Enum):
     social_share_type = "social_share"
+    ride_type="ride"
 
 
 class User(db.Model, ModelViewsMix):
@@ -146,7 +147,7 @@ class FreeRide(db.Model, ModelViewsMix):
 
     id = db.Column(db.String, primary_key=True)
     free_ride_type = db.Column(db.Enum(FreeRideType), nullable=False)
-    token = db.Column(db.String, unique=True)
+    token = db.Column(db.String, unique=True, nullable=False)
     token_status = db.Column(db.Boolean, default=False)
     description = db.Column(db.String, nullable=True)
     user_id = db.Column(db.String(), db.ForeignKey('User.id'), nullable=False)

@@ -19,7 +19,8 @@ try:
         ride_fare_operation, transfer_operation, save_transaction
     )
     from ...models import (
-        User, Transaction, Wallet, Icon, FreeRide, OperationType, TransactionType
+        User, Transaction, Wallet, Icon, FreeRide, OperationType, TransactionType,
+        FreeRideType
     )
     from ...schema import transaction_schema
 except ImportError:
@@ -36,7 +37,8 @@ except ImportError:
         ride_fare_operation, transfer_operation, save_transaction
     )
     from moov_backend.api.models import (
-        User, Transaction, Wallet, Icon, FreeRide, OperationType, TransactionType
+        User, Transaction, Wallet, Icon, FreeRide, OperationType, TransactionType,
+        FreeRideType
     )
     from moov_backend.api.schema import transaction_schema
 
@@ -257,6 +259,7 @@ class TransactionResource(Resource):
                                                     _sender.email, str(datetime.now()), _sender.number_of_rides
                                                 )
                         save_free_ride_token(
+                            free_ride_type=FreeRideType.ride_type,
                             token=free_ride_token, 
                             description=free_ride_description, 
                             user_id=_sender_id

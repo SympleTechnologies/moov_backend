@@ -99,6 +99,7 @@ def seed_default_data(prompt=True):
                 create_icon(icon=default_icon, operation_type="cancel_operation")
                 create_icon(icon=default_icon, operation_type="load_wallet_operation")
                 create_icon(icon=default_icon, operation_type="ride_operation")
+                create_icon(icon=default_icon, operation_type="free_ride_operation")
                 create_icon(icon=default_icon, operation_type="moov_operation")
 
                 message = "\n\n\tYay *\(^o^)/* \n\n Your database has been succesfully seeded !!! \n\n\t *\(@^_^@)/* <3 <3 \n\n"

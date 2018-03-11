@@ -5,9 +5,11 @@ from sqlalchemy import desc, and_
 try:
     from ..models import FreeRide, Transaction
     from ..generator.free_ride_token_generator import generate_free_ride_token
+    from ..schema import free_ride_schema
 except ImportError:
     from moov_backend.api.models import FreeRide
     from moov_backend.api.generator.free_ride_token_generator import generate_free_ride_token
+    from moov_backend.api.schema import free_ride_schema
 
 
 def check_past_week_rides(user_id):
@@ -47,11 +49,19 @@ def get_free_ride_token(user):
 
     return free_ride_token
 
-def save_free_ride_token(token, description, user_id):
+def save_free_ride_token(free_ride_type, token, description, user_id):
     new_free_ride = FreeRide(
+                        free_ride_type=free_ride_type,
                         token=token,
                         token_status=True,
                         description=description,
                         user_id=user_id
                     )
     new_free_ride.save()
+    return free_ride_schema.dump(new_free_ride)
+
+def has_free_ride(user_id, free_ride_type):
+    return FreeRide.query.filter(and_(
+                FreeRide.user_id==user_id,
+                FreeRide.free_ride_type==free_ride_type
+            )).first()

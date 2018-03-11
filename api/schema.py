@@ -98,8 +98,34 @@ class NotificationSchema(Schema):
     modified_at = fields.DateTime(dump_only=True)
 
 
+class FreeRideSchema(Schema):
+    id = fields.Str(dump_only=True)
+    free_ride_type = fields.Str(
+            required=True,
+            errors={
+                'required': 'Please provide a valid free ride type.',
+                'type': 'Invalid type'
+            })
+    token = fields.Str(
+            required=True,
+            errors={
+                'required': 'Please provide a token.',
+                'type': 'Invalid type'
+            })
+    token_status = fields.Boolean(errors={'type': 'Invalid type'})
+    description = fields.Str(errors={'type': 'Invalid type'})
+    user_id = fields.Str(errors={'type': 'Invalid type'})
+    created_at = fields.DateTime(dump_only=True)
+    modified_at = fields.DateTime(dump_only=True)
+
+    @validates_schema(pass_original=True)
+    def unknown_fields(self, data, original_data):
+        check_unknown_fields(data, original_data, self.fields)
+
+
 user_schema = UserSchema()
 user_login_schema = UserLoginSchema()
 transaction_schema = TransactionSchema()
 notification_schema = NotificationSchema()
+free_ride_schema = FreeRideSchema()
  
