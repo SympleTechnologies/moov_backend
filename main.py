@@ -15,12 +15,14 @@ try:
     from api.v1.views.user import UserResource, UserSignupResource, UserLoginResource
     from api.v1.views.profile_page import BasicInfoResource
     from api.v1.views.transaction import TransactionResource, AllTransactionsResource
+    from api.v1.views.free_ride import FreeRideResource
 except ImportError:
     from moov_backend.config import app_configuration
     from moov_backend.api.v1.views.route import RouteResource
     from moov_backend.api.v1.views.user import UserResource, UserSignupResource, UserLoginResource
     from moov_backend.api.v1.views.profile_page import BasicInfoResource
     from moov_backend.api.v1.views.transaction import TransactionResource, AllTransactionsResource
+    from moov_backend.api.v1.views.free_ride import FreeRideResource
 
 
 dotenv_path = join(dirname(__file__), '.env')
@@ -78,6 +80,9 @@ def create_flask_app(environment):
 
     # Profile Page routes
     api.add_resource(BasicInfoResource, '/api/v1/basic_info', '/api/v1/basic_info/', endpoint='user_basic_info')
+    
+    # Free Ride routes
+    api.add_resource(FreeRideResource, '/api/v1/free_ride', '/api/v1/free_ride/', endpoint='free_ride_endpoint')
 
     # handle default 404 exceptions with a custom response
     @app.errorhandler(404)

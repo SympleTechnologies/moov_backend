@@ -90,6 +90,10 @@ class TransactionType(enum.Enum):
     both_types = "debit and credit"
 
 
+class FreeRideType(enum.Enum):
+    social_share_type = "social_share"
+
+
 class User(db.Model, ModelViewsMix):
     
     __tablename__ = 'User'
@@ -141,6 +145,7 @@ class FreeRide(db.Model, ModelViewsMix):
     __tablename__ = 'FreeRide'
 
     id = db.Column(db.String, primary_key=True)
+    free_ride_type = db.Column(db.Enum(FreeRideType), nullable=False)
     token = db.Column(db.String, unique=True)
     token_status = db.Column(db.Boolean, default=False)
     description = db.Column(db.String, nullable=True)
@@ -157,6 +162,7 @@ class DriverInfo(db.Model, ModelViewsMix):
     __tablename__ = 'DriverInfo'
 
     id = db.Column(db.String, primary_key=True)
+    
     car_model = db.Column(db.String)
     left_image = db.Column(db.String)
     right_image = db.Column(db.String)
