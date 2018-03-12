@@ -78,7 +78,7 @@ def upgrade():
     )
     op.create_table('FreeRide',
     sa.Column('id', sa.String(), nullable=False),
-    sa.Column('free_ride_type', ENUM('social_share_type', name='freeridetype'), nullable=False),
+    sa.Column('free_ride_type', ENUM('social_share_type', name='freeridetype', create_type=False), nullable=False),
     sa.Column('token', sa.String(), nullable=True),
     sa.Column('token_status', sa.Boolean(), nullable=True),
     sa.Column('description', sa.String(), nullable=True),

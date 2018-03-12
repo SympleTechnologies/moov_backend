@@ -35,6 +35,7 @@ class UserSchema(Schema):
             'type': 'Invalid type'
         })
     image_url = fields.Str(errors={'type': 'Invalid type'})
+    mobile_number = fields.Str(errors={'type': 'Invalid type'})
     authorization_code = fields.Str(errors={'type': 'Invalid type'})
     authorization_code_status = fields.Bool(errors={'type': 'Invalid type'})
     created_at = fields.DateTime(dump_only=True)
@@ -128,4 +129,3 @@ user_login_schema = UserLoginSchema()
 transaction_schema = TransactionSchema()
 notification_schema = NotificationSchema()
 free_ride_schema = FreeRideSchema()
- 

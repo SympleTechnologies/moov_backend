@@ -76,7 +76,7 @@ class UserSignupResource(Resource):
     def post(self):
         json_input = request.get_json()
         
-        keys = ['user_type', 'firstname', 'lastname', 'email', 'image_url']
+        keys = ['user_type', 'firstname', 'lastname', 'email', 'image_url', 'mobile_number']
 
         _user = {}
         if validate_input_data(json_input, keys, _user):
@@ -114,7 +114,9 @@ class UserSignupResource(Resource):
             firstname=data['firstname'],
             lastname=data['lastname'],
             email=data['email'],
-            image_url=data['image_url'] if json_input.get('image_url') else "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973461_1280.png",
+            image_url=data['image_url'] if json_input.get('image_url') else \
+                        "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973461_1280.png",
+            mobile_number=data['mobile_number'] if json_input.get('mobile_number') else ""
         )
         new_user.save()
 
