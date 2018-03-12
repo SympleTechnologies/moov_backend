@@ -194,3 +194,25 @@ class UserLoginResource(Resource):
                             "token": str(_token)
                         }
                     })
+
+
+class UserAuthorizationResource(Resource):
+        
+    @token_required
+    def get(self):
+        _current_user_id = g.current_user.id
+
+        _current_user = User.query.get(_current_user_id)
+        if not _current_user:
+            return moov_errors("User does not exist", 404)
+
+        _data = {}
+        _data['user_id'] = _current_user_id
+        _data['authorization_code'] = _data['authorization_code'] = _current_user.authorization_code
+        _data['authorization_code_status'] = _current_user.authorization_code_status
+
+        return jsonify({"status": "success",
+                        "data": {
+                            "data": _data
+                        }
+                    })

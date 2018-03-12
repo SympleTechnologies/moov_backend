@@ -12,14 +12,18 @@ from flask_restful import Api, abort
 try:
     from config import app_configuration
     from api.v1.views.route import RouteResource
-    from api.v1.views.user import UserResource, UserSignupResource, UserLoginResource
+    from api.v1.views.user import (
+        UserResource, UserSignupResource, UserLoginResource, UserAuthorizationResource
+    )
     from api.v1.views.profile_page import BasicInfoResource
     from api.v1.views.transaction import TransactionResource, AllTransactionsResource
     from api.v1.views.free_ride import FreeRideResource
 except ImportError:
     from moov_backend.config import app_configuration
     from moov_backend.api.v1.views.route import RouteResource
-    from moov_backend.api.v1.views.user import UserResource, UserSignupResource, UserLoginResource
+    from moov_backend.api.v1.views.user import (
+        UserResource, UserSignupResource, UserLoginResource, UserAuthorizationResource
+    )
     from moov_backend.api.v1.views.profile_page import BasicInfoResource
     from moov_backend.api.v1.views.transaction import TransactionResource, AllTransactionsResource
     from moov_backend.api.v1.views.free_ride import FreeRideResource
@@ -69,6 +73,8 @@ def create_flask_app(environment):
 
     # User routes
     api.add_resource(UserResource, '/api/v1/user', '/api/v1/user/', endpoint='user_endpoint')
+    api.add_resource(UserAuthorizationResource, '/api/v1/user_authorization', '/api/v1/user_authorization/',
+                        endpoint='user_authorization_endpoint')
 
     # Authentication routes
     api.add_resource(UserSignupResource, '/api/v1/signup', '/api/v1/signup/', endpoint='singup_user')
