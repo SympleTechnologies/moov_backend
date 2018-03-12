@@ -27,11 +27,10 @@ def load_wallet_operation(cost_of_transaction, _current_user, _current_user_id, 
     
     paystack_deduction = paystack_deduction_amount(cost_of_transaction)
     receiver_amount_before_transaction = _receiver_wallet.wallet_amount
-    new_cost_of_transaction = cost_of_transaction - paystack_deduction
-    receiver_amount_after_transaction = receiver_amount_before_transaction + new_cost_of_transaction
+    receiver_amount_after_transaction = receiver_amount_before_transaction + cost_of_transaction
     receiver_id = _current_user_id
     receiver_wallet_id = _receiver_wallet.id
-    transaction_detail = "{0}'s wallet has been credited with {1} with a paystack deduction of {2}".format(_current_user.firstname, new_cost_of_transaction, paystack_deduction)
+    transaction_detail = "{0}'s wallet has been credited with {1}".format(_current_user.firstname, cost_of_transaction)
 
     _receiver_wallet.wallet_amount = receiver_amount_after_transaction
     _receiver_wallet.save()
@@ -40,7 +39,7 @@ def load_wallet_operation(cost_of_transaction, _current_user, _current_user_id, 
     if transaction_icon:
         _transaction_icon_id = transaction_icon.id
 
-    notification_message = "Your wallet has been credited with N{0} with a transaction charge of N{1}".format(new_cost_of_transaction, paystack_deduction)
+    notification_message = "Your wallet has been credited with N{0}".format(cost_of_transaction)
     save_notification(
             recipient_id=receiver_id, 
             sender_id=moov_user.id, 
