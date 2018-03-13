@@ -50,7 +50,7 @@ class TransactionResource(Resource):
     def post(self):
         json_input = request.get_json()
         
-        keys = ['type_of_operation', 'cost_of_transaction', 'user_id', 'school_email', 'car_owner_email', 'free_token']
+        keys = ['type_of_operation', 'cost_of_transaction', 'receiver_email', 'school_email', 'car_owner_email', 'free_token']
 
         _transaction = {}
         if validate_input_data(json_input, keys, _transaction):
@@ -87,6 +87,7 @@ class TransactionResource(Resource):
                 return check_transaction_validity(cost_of_transaction, message)
             
             _data, _ = load_wallet_operation(cost_of_transaction, _current_user, _current_user_id, moov_user)
+            _data["free_ride_token"] = ""
             return {
                     'status': 'success',
                     'data': {
@@ -96,12 +97,12 @@ class TransactionResource(Resource):
                 }, 201
 
         # case ride_fare and transfer
-        if ('user_id') in json_input:
+        if ('receiver_email') in json_input:
             cost_of_transaction = json_input["cost_of_transaction"]
-            _receiver_id = json_input['user_id']
+            _receiver_email = json_input['receiver_email']
             _sender_id = _current_user_id
             _sender = _current_user
-            _receiver = User.query.filter(User.email==_receiver_id).first()
+            _receiver = User.query.filter(User.email==_receiver_email).first()
 
             if not _receiver:
                 return moov_errors("User does not exist", 404)
@@ -153,6 +154,7 @@ class TransactionResource(Resource):
                                 sender_amount_after_transaction, 
                                 moov_user
                             )
+                _data["free_ride_token"] = ""
                 return {
                         'status': 'success',
                         'data': {

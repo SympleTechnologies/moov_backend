@@ -82,7 +82,7 @@ def create_flask_app(environment):
 
     # Transaction routes
     api.add_resource(TransactionResource, '/api/v1/transaction', '/api/v1/transaction/', endpoint='single_transaction')
-    api.add_resource(TransactionResource, '/api/v1/all-transactions', '/api/v1/all-transactions/', endpoint='all_transactions')
+    api.add_resource(TransactionResource, '/api/v1/all_transactions', '/api/v1/all_transactions/', endpoint='all_transactions')
 
     # Profile Page routes
     api.add_resource(BasicInfoResource, '/api/v1/basic_info', '/api/v1/basic_info/', endpoint='user_basic_info')
