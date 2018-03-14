@@ -12,6 +12,8 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URI")
     SQLALCHEMY_ECHO = False
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    PAGE_LIMIT = 10
+    DEFAULT_PAGE = 1
 
 
 class DevelopmentConfiguration(Config):

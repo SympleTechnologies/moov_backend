@@ -18,6 +18,7 @@ try:
     from api.v1.views.profile_page import BasicInfoResource
     from api.v1.views.transaction import TransactionResource, AllTransactionsResource
     from api.v1.views.free_ride import FreeRideResource
+    from api.v1.views.notification import NotificationResource
 except ImportError:
     from moov_backend.config import app_configuration
     from moov_backend.api.v1.views.route import RouteResource
@@ -27,6 +28,7 @@ except ImportError:
     from moov_backend.api.v1.views.profile_page import BasicInfoResource
     from moov_backend.api.v1.views.transaction import TransactionResource, AllTransactionsResource
     from moov_backend.api.v1.views.free_ride import FreeRideResource
+    from moov_backend.api.v1.views.notification import NotificationResource
 
 
 dotenv_path = join(dirname(__file__), '.env')
@@ -89,6 +91,10 @@ def create_flask_app(environment):
     
     # Free Ride routes
     api.add_resource(FreeRideResource, '/api/v1/free_ride', '/api/v1/free_ride/', endpoint='free_ride_endpoint')
+
+    # Notification routes
+    api.add_resource(NotificationResource, '/api/v1/notification', '/api/v1/notification/', endpoint='single_notification')
+
 
     # handle default 404 exceptions with a custom response
     @app.errorhandler(404)
