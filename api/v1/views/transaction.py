@@ -1,8 +1,9 @@
 import os
 from datetime import datetime
 
-from flask import g, request, jsonify
+from flask import g, request, current_app, url_for, jsonify
 from flask_restful import Resource
+from sqlalchemy import or_
 
 try:
     from ...auth.token import token_required
@@ -44,6 +45,61 @@ except ImportError:
 
 
 class TransactionResource(Resource):
+    
+    @token_required
+    def get(self):
+        _user_id = g.current_user.id
+        _user = User.query.get(_user_id)
+        if not _user:
+            return moov_errors('User does not exist', 404)
+
+        _page = request.args.get('page')
+        _limit = request.args.get('limit')
+        page = int(_page or current_app.config['DEFAULT_PAGE'])
+        limit = int(_limit or current_app.config['PAGE_LIMIT'])
+
+        _transactions = Transaction.query.filter(or_(
+                            Transaction.sender_id==_user_id,
+                            Transaction.receiver_id==_user_id
+                        )).order_by(
+                            Transaction.transaction_date.desc()
+                        )
+        transaction_count = len(_transactions.all())
+        _transactions = _transactions.paginate(
+            page=page, per_page=limit, error_out=False)
+
+        transactions = []
+        for _transaction in _transactions.items:
+            _data, _ = transaction_schema.dump(_transaction)
+            transactions.append(_data)
+
+        previous_url = None
+        next_url = None
+
+        if _transactions.has_next:
+            next_url = url_for(request.endpoint,
+                               limit=limit,
+                               page=page+1,
+                               _external=True)
+        if _transactions.has_prev:
+            previous_url = url_for(request.endpoint,
+                                   limit=limit,
+                                   page=page-1,
+                                   _external=True)
+
+        return {
+            'status': 'success',
+            'data': { 
+                        'message': 'Transactions successfully retrieved',
+                        'all_count': transaction_count,
+                        'current_count': len(transactions),
+                        'transactions': transactions,
+                        'next_url': next_url,
+                        'previous_url': previous_url,
+                        'current_page': _transactions.page,
+                        'all_pages': _transactions.pages
+                    }
+        }, 200
     
     @token_required
     @validate_request()
