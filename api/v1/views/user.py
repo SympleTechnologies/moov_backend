@@ -12,13 +12,13 @@ try:
     from ...auth.token import token_required
     from ...auth.validation import validate_request, validate_input_data
     from ...helper.error_message import moov_errors, not_found_errors
-    from ...models import User, UserType, Wallet, Transaction, Notification, Icon
+    from ...models import User, UserType, Wallet, Transaction, Notification, FreeRide, Icon
     from ...schema import user_schema, user_login_schema
 except ImportError:
     from moov_backend.api.auth.token import token_required
     from moov_backend.api.auth.validation import validate_request, validate_input_data
     from moov_backend.api.helper.error_message import moov_errors, not_found_errors
-    from moov_backend.api.models import User, UserType, Wallet, Transaction, Notification, Icon
+    from moov_backend.api.models import User, UserType, Wallet, Transaction, Notification, FreeRide, Icon
     from moov_backend.api.schema import user_schema, user_login_schema
 
 
@@ -27,6 +27,32 @@ load_dotenv(dotenv_path)
 
 
 class UserResource(Resource):
+    
+    @token_required
+    def get(self):
+        _user_id = g.current_user.id
+        _user = User.query.get(_user_id)
+        if not _user:
+            return moov_errors('User does not exist', 404)
+
+        user_type = _user.user_type.title
+        if user_type == "super_admin" or \
+           user_type == "admin" or \
+           user_type == "school" or \
+           user_type == "car_owner" or \
+           user_type == "moov":
+            return moov_errors("Unauthorized access", 401)
+
+        _data, _ = user_schema.dump(_user)
+        _data['wallet_amount'] = _user.wallet_user[0].wallet_amount
+        _data["user_type"] = user_type
+        return {
+            'status': 'success',
+            'data': { 
+                        'message': 'User has been successfully retrieved',
+                        'user': _data
+                    }
+        }, 200
     
     @token_required
     @validate_request()
@@ -56,14 +82,8 @@ class UserResource(Resource):
         str(_current_user.user_type.title) not in ["admin", "super_admin"]:
             return moov_errors("Unauthorized access. You cannot delete this user", 401)
 
-        user_wallet = Wallet.query.filter(Wallet.user_id==_user_to_delete.id).first()
-        user_transaction = Transaction.query.filter(or_(Transaction.receiver_wallet_id.like(user_wallet.id),
-                                        Transaction.sender_wallet_id.like(user_wallet.id))).first()
-        if user_transaction:
-            return moov_errors("Please contact admin to deactivate account", 401)
-
-        user_wallet.delete()
         _user_to_delete.delete()
+
 
         return {
             'status': 'success',

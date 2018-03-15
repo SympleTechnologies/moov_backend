@@ -41,6 +41,7 @@ class BasicInfoResource(Resource):
             return moov_errors('Unauthorized access', 401)
 
         _user_data, _ = user_schema.dump(_user)
+        _user_data['wallet_amount'] = _user.wallet_user[0].wallet_amount
         _user_data["user_type"] = _user_type
 
         return jsonify({"status": "success",
