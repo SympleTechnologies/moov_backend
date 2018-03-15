@@ -53,6 +53,69 @@ class UserResource(Resource):
                         'user': _data
                     }
         }, 200
+
+    @token_required
+    @validate_request()
+    def put(self):
+        json_input = request.get_json()
+
+        keys = [
+                    'user_type',
+                    'email',
+                    'firstname', 
+                    'lastname', 
+                    'image_url', 
+                    'mobile_number',
+                    'authorization_code'
+                ]
+        if validate_input_data(json_input, keys):
+            return validate_input_data(json_input, keys)
+
+        _user_id = g.current_user.id
+        _user = User.query.get(_user_id)
+        if not _user:
+            return moov_errors("User does not exist", 404)
+
+        if _user.user_type.title ==  "super_admin" or \
+           _user.user_type.title == "admin" or \
+           _user.user_type.title == "school" or \
+           _user.user_type.title == "car_owner" or \
+           _user.user_type.title == "moov":
+            return moov_errors("Unauthorized access", 401)
+
+        if 'user_type' in json_input:
+            return moov_errors('Unauthorized access, you cannot update user types', 401)
+
+        if 'email' in json_input:
+            return moov_errors('Unauthorized access, you cannot update emails', 401)
+
+        if 'firstname' in json_input:
+            _user.firstname = json_input['firstname']
+
+        if 'lastname' in json_input:
+            _user.lastname = json_input['lastname']
+
+        if 'image_url' in json_input:
+            _user.image_url = json_input['image_url']
+
+        if 'mobile_number' in json_input:
+            _user.mobile_number = json_input['mobile_number']
+
+        if 'authorization_code' in json_input:
+            if not json_input['authorization_code']:
+                return moov_errors('Authorization code cannot be null or empty', 400)
+            _user.authorization_code = json_input['authorization_code']
+            _user.authorization_code_status = True
+
+        _user.save()
+        _data, _ = user_schema.dump(_user)
+        return {
+            'status': 'success',
+            'data': {
+                'user': _data,
+                'message': 'User information updated succesfully',
+            }
+        }, 200
     
     @token_required
     @validate_request()
