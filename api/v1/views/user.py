@@ -10,13 +10,13 @@ from flask_jwt import jwt
 
 try:
     from ...auth.token import token_required
-    from ...auth.validation import validate_request, validate_input_data
+    from ...auth.validation import validate_request, validate_input_data, validate_empty_string
     from ...helper.error_message import moov_errors, not_found_errors
     from ...models import User, UserType, Wallet, Transaction, Notification, FreeRide, Icon
     from ...schema import user_schema, user_login_schema
 except ImportError:
     from moov_backend.api.auth.token import token_required
-    from moov_backend.api.auth.validation import validate_request, validate_input_data
+    from moov_backend.api.auth.validation import validate_request, validate_input_data, validate_empty_string
     from moov_backend.api.helper.error_message import moov_errors, not_found_errors
     from moov_backend.api.models import User, UserType, Wallet, Transaction, Notification, FreeRide, Icon
     from moov_backend.api.schema import user_schema, user_login_schema
@@ -76,6 +76,14 @@ class UserResource(Resource):
         if not _user:
             return moov_errors("User does not exist", 404)
 
+        if validate_empty_string(json_input["authorization_code"]) or \
+           validate_empty_string(json_input["image_url"]) or \
+           validate_empty_string(json_input["firstname"]) or \
+           validate_empty_string(json_input["lastname"]) or \
+           validate_empty_string(json_input["email"]) or \
+           validate_empty_string(json_input["mobile_number"]):
+            return moov_errors("Empty strings are not allowed, exception for image urls", 400)
+
         if _user.user_type.title ==  "super_admin" or \
            _user.user_type.title == "admin" or \
            _user.user_type.title == "school" or \
@@ -102,8 +110,6 @@ class UserResource(Resource):
             _user.mobile_number = json_input['mobile_number']
 
         if 'authorization_code' in json_input:
-            if not json_input['authorization_code']:
-                return moov_errors('Authorization code cannot be null or empty', 400)
             _user.authorization_code = json_input['authorization_code']
             _user.authorization_code_status = True
 
@@ -172,6 +178,12 @@ class UserSignupResource(Resource):
 
         if User.is_user_data_taken(json_input['email']):
             return moov_errors('User already exists', 400)
+
+        if validate_empty_string(json_input["firstname"]) or \
+           validate_empty_string(json_input["lastname"]) or \
+           validate_empty_string(json_input["email"]) or \
+           validate_empty_string(json_input["mobile_number"]):
+            return moov_errors("Empty strings are not allowed, exception for image urls", 400)
 
         user_type = UserType.query.filter(UserType.title==data['user_type'].lower()).first()
         user_type_id = user_type.id if user_type else None

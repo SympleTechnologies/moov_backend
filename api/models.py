@@ -105,7 +105,7 @@ class User(db.Model, ModelViewsMix):
     lastname = db.Column(db.String(30), nullable=False)
     email = db.Column(db.String(50), unique=True, nullable=False)
     image_url = db.Column(db.String)
-    mobile_number = db.Column(db.String, nullable=True)
+    mobile_number = db.Column(db.String, nullable=False)
     authorization_code = db.Column(db.String, unique=True)
     authorization_code_status = db.Column(db.Boolean, default=False)
     number_of_rides = db.Column(db.Integer, default=0)

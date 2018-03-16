@@ -34,8 +34,13 @@ class UserSchema(Schema):
             'required': 'Please provide a valid email.',
             'type': 'Invalid type'
         })
+    mobile_number = fields.Str(
+        required=True,
+        errors={
+            'required': 'Please provide a valid mobile number.',
+            'type': 'Invalid type'
+        })
     image_url = fields.Str(errors={'type': 'Invalid type'})
-    mobile_number = fields.Str(errors={'type': 'Invalid type'})
     authorization_code = fields.Str(errors={'type': 'Invalid type'})
     authorization_code_status = fields.Bool(errors={'type': 'Invalid type'})
     created_at = fields.DateTime(dump_only=True)
