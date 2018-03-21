@@ -9,7 +9,7 @@ from sqlalchemy.orm import backref, relationship
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.types import JSON, TEXT, TypeDecorator
-from sqlalchemy import event
+from sqlalchemy import event, and_
 from datetime import datetime
 
 try:
@@ -76,6 +76,7 @@ class ModelViewsMix(object):
             return error
 
 
+# enums
 class OperationType(enum.Enum):
     transfer_type = "transfer"
     wallet_type = "load_wallet"
@@ -95,12 +96,40 @@ class FreeRideType(enum.Enum):
     ride_type="ride"
 
 
+class RatingsType(enum.Enum):
+    no_ratings = None
+    one = 1
+    two = 2
+    three = 3
+    four = 4
+    five = 5
+
+
+# models
+class RateMe(db.Model, ModelViewsMix):
+    
+    __tablename__ = 'RateMe'
+
+    id = db.Column(db.String, primary_key=True)
+    rating_type = db.Column(db.Enum(RatingsType), nullable=False)
+    ratee_id = db.Column(db.String(), db.ForeignKey('User.id', ondelete='SET NULL'))
+    rater_id = db.Column(db.String(), db.ForeignKey('User.id', ondelete='SET NULL'))
+    ratee = relationship("User", single_parent=True, foreign_keys=[ratee_id])
+    rater = relationship("User", single_parent=True, foreign_keys=[rater_id])
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow) 
+
+    def __repr__(self):
+        return '<RateMe ratee-%r rater-%r>' % (self.ratee_id, self.rater_id) 
+
+
 class User(db.Model, ModelViewsMix):
     
     __tablename__ = 'User'
 
     id = db.Column(db.String, primary_key=True)
     user_type_id = db.Column(db.String(), db.ForeignKey('UserType.id', ondelete='SET NULL'))
+    user_id = db.Column(db.String, unique=True)
     firstname = db.Column(db.String(30), nullable=False)
     lastname = db.Column(db.String(30), nullable=False)
     email = db.Column(db.String(50), unique=True, nullable=False)
@@ -109,6 +138,7 @@ class User(db.Model, ModelViewsMix):
     authorization_code = db.Column(db.String, unique=True)
     authorization_code_status = db.Column(db.Boolean, default=False)
     number_of_rides = db.Column(db.Integer, default=0)
+    ratings = db.Column(db.Integer, nullable=True)
     wallet_user = db.relationship('Wallet', cascade="all,delete-orphan", back_populates='user_wallet')
     free_ride = db.relationship('FreeRide', backref='user_free_ride', lazy='dynamic')
     driver_info = db.relationship('DriverInfo', cascade="all,delete-orphan", backref='driver_information', lazy='dynamic')
@@ -123,6 +153,33 @@ class User(db.Model, ModelViewsMix):
     @classmethod
     def is_user_data_taken(cls, email):
        return db.session.query(db.exists().where(User.email==email)).scalar()
+
+    @classmethod
+    def get_average_ratings(cls):
+        total_ratings = 0
+        my_ratings = RateMe.query.filter(and_(
+                        RateMe.ratee_id==User.id,
+                        RateMe.rating!="RatingsType.no_ratings"
+                    )).all()
+
+        my_ratings_count = len(my_ratings)
+        if my_ratings_count == 0:
+            return None
+
+        for rating in my_ratings:
+            if rating.rating_type == "RatingsType.one":
+                total_ratings += 1
+            if rating.rating_type == "RatingsType.two":
+                total_ratings += 2
+            if rating.rating_type == "RatingsType.three":
+                total_ratings += 3
+            if rating.rating_type == "RatingsType.four":
+                total_ratings += 4
+            if rating.rating_type == "RatingsType.five":
+                total_ratings += 5
+
+        average_ratings = int(round(total_ratings / my_ratings_count, 0))
+        return average_ratings 
 
 
 class UserType(db.Model, ModelViewsMix):
@@ -163,7 +220,14 @@ class DriverInfo(db.Model, ModelViewsMix):
     __tablename__ = 'DriverInfo'
 
     id = db.Column(db.String, primary_key=True)
-    
+    location_latitude = db.Column(db.Float, nullable=True)
+    location_longitude = db.Column(db.Float, nullable=True)
+    destination_latitude = db.Column(db.Float, nullable=True)
+    destination_longitude = db.Column(db.Float, nullable=True)
+    car_slots = db.Column(db.Integer, nullable=False)
+    available_car_slots = db.Column(db.Integer, default=0)
+    status = db.Column(db.Boolean, default=False)
+    on_trip_with = db.Column(json_type, nullable=True)
     car_model = db.Column(db.String)
     left_image = db.Column(db.String)
     right_image = db.Column(db.String)

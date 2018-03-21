@@ -16,6 +16,12 @@ class UserSchema(Schema):
             'required': 'Please provide the user type. It can either be a driver or student',
             'type': 'Invalid type'
         })
+    user_id = fields.Str(
+        required=True,
+        errors={
+            'required': 'Please provide your user id.',
+            'type': 'Invalid type'
+        })
     firstname = fields.Str(
         required=True,
         errors={
@@ -43,6 +49,7 @@ class UserSchema(Schema):
     image_url = fields.Str(errors={'type': 'Invalid type'})
     authorization_code = fields.Str(errors={'type': 'Invalid type'})
     authorization_code_status = fields.Bool(errors={'type': 'Invalid type'})
+    ratings = fields.Integer(errors={'type': 'Invalid type'})
     created_at = fields.DateTime(dump_only=True)
     modified_at = fields.DateTime(dump_only=True)
 
@@ -57,6 +64,12 @@ class UserLoginSchema(Schema):
         required=True,
         errors={
             'required': 'Please provide a valid email.',
+            'type': 'Invalid type'
+        })
+    user_id = fields.Str(
+        required=True,
+        errors={
+            'required': 'Please provide a valid user id.',
             'type': 'Invalid type'
         })
 
