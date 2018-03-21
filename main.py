@@ -13,20 +13,32 @@ try:
     from config import app_configuration
     from api.v1.views.route import RouteResource
     from api.v1.views.user import (
-        UserResource, UserSignupResource, UserLoginResource, UserAuthorizationResource
+        UserResource, UserSignupResource, UserLoginResource, 
+        UserAuthorizationResource
+    )
+    from api.v1.views.driver import (
+        DriverResource
     )
     from api.v1.views.profile_page import BasicInfoResource
-    from api.v1.views.transaction import TransactionResource, AllTransactionsResource
+    from api.v1.views.transaction import (
+        TransactionResource, AllTransactionsResource
+    )
     from api.v1.views.free_ride import FreeRideResource
     from api.v1.views.notification import NotificationResource
 except ImportError:
     from moov_backend.config import app_configuration
     from moov_backend.api.v1.views.route import RouteResource
     from moov_backend.api.v1.views.user import (
-        UserResource, UserSignupResource, UserLoginResource, UserAuthorizationResource
+        UserResource, UserSignupResource, UserLoginResource, 
+        UserAuthorizationResource
+    )
+    from moov_backend.api.v1.views.driver import (
+        DriverResource
     )
     from moov_backend.api.v1.views.profile_page import BasicInfoResource
-    from moov_backend.api.v1.views.transaction import TransactionResource, AllTransactionsResource
+    from moov_backend.api.v1.views.transaction import (
+        TransactionResource, AllTransactionsResource
+    )
     from moov_backend.api.v1.views.free_ride import FreeRideResource
     from moov_backend.api.v1.views.notification import NotificationResource
 
@@ -78,9 +90,12 @@ def create_flask_app(environment):
     api.add_resource(UserAuthorizationResource, '/api/v1/user_authorization', '/api/v1/user_authorization/',
                         endpoint='user_authorization_endpoint')
 
+    # Driver routes
+    api.add_resource(DriverResource, '/api/v1/driver', '/api/v1/driver/', endpoint='driver_endpoint')
+
     # Authentication routes
     api.add_resource(UserSignupResource, '/api/v1/signup', '/api/v1/signup/', endpoint='singup_user')
-    api.add_resource(UserLoginResource, '/api/v1/login', '/api/v1/login/', endpoint='login_user')
+    api.add_resource(UserLoginResource, '/api/v1/login', '/api/v1/login/', endpoint='login_endpoint')
 
     # Transaction routes
     api.add_resource(TransactionResource, '/api/v1/transaction', '/api/v1/transaction/', endpoint='single_transaction')

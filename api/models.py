@@ -381,6 +381,7 @@ def fancy_id_generator(mapper, connection, target):
 # associate the listener function with models, to execute during the
 # "before_insert" event
 tables = [
+            RateMe,
             User, 
             UserType, 
             Wallet, 

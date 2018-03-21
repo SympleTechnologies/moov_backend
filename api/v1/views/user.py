@@ -12,14 +12,20 @@ try:
     from ...auth.token import token_required
     from ...auth.validation import validate_request, validate_input_data, validate_empty_string
     from ...helper.error_message import moov_errors, not_found_errors
-    from ...models import User, UserType, Wallet, Transaction, Notification, FreeRide, Icon
-    from ...schema import user_schema, user_login_schema
+    from ...models import (
+        User, UserType, Wallet, Transaction, Notification, 
+        FreeRide, Icon, DriverInfo, AdmissionType
+    )
+    from ...schema import user_schema, user_login_schema, driver_info_schema
 except ImportError:
     from moov_backend.api.auth.token import token_required
     from moov_backend.api.auth.validation import validate_request, validate_input_data, validate_empty_string
     from moov_backend.api.helper.error_message import moov_errors, not_found_errors
-    from moov_backend.api.models import User, UserType, Wallet, Transaction, Notification, FreeRide, Icon
-    from moov_backend.api.schema import user_schema, user_login_schema
+    from moov_backend.api.models import (
+        User, UserType, Wallet, Transaction, Notification, 
+        FreeRide, Icon, DriverInfo, AdmissionType
+    )
+    from moov_backend.api.schema import user_schema, user_login_schema, driver_info_schema
 
 
 dotenv_path = join(dirname(__file__), '.env')
@@ -166,7 +172,14 @@ class UserSignupResource(Resource):
     def post(self):
         json_input = request.get_json()
         
-        keys = ['user_type', 'firstname', 'lastname', 'email', 'image_url', 'mobile_number']
+        keys = [
+                    'user_type', 
+                    'firstname', 
+                    'lastname', 
+                    'email', 
+                    'image_url', 
+                    'mobile_number'
+                ]
 
         _user = {}
         if validate_input_data(json_input, keys, _user):
@@ -244,6 +257,21 @@ class UserSignupResource(Resource):
         _data, _ = user_schema.dump(new_user)
         _data["wallet_amount"] = user_wallet.wallet_amount
         _data["user_type"] = new_user.user_type.title
+
+        if user_type.title.lower() == "driver":
+            new_driver_info = DriverInfo(
+                driver_id=new_user.id
+            )
+            new_driver_info.save()
+            user_notification = Notification(
+                message="Thank you for registering to be a MOOV driver. \
+                            Your request is waiting approval, we will get back to you soon",
+                recipient_id=new_user.id,
+                sender_id=moov_user.id,
+                transaction_icon_id=_transaction_icon_id
+            )
+            user_notification.save()
+
         return {
             'status': 'success',
             'data': {

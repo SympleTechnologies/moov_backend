@@ -117,6 +117,37 @@ class NotificationSchema(Schema):
     modified_at = fields.DateTime(dump_only=True)
 
 
+class DriverInfoSchema(Schema):
+    id = fields.Str(dump_only=True)
+    location_latitude = fields.Float(errors={'type': 'Invalid type'})
+    location_longitude = fields.Float(errors={'type': 'Invalid type'})
+    destination_latitude = fields.Float(errors={'type': 'Invalid type'})
+    destination_longitude = fields.Float(errors={'type': 'Invalid type'})
+    car_slots = fields.Integer(errors={'type': 'Invalid type'})
+    available_car_slots = fields.Integer(errors={'type': 'Invalid type'})
+    status = fields.Boolean(errors={'type': 'Invalid type'})
+    on_trip_with = fields.Dict(errors={'type': 'Invalid type'})
+    car_model = fields.Str(errors={'type': 'Invalid type'})
+    left_image = fields.Str(errors={'type': 'Invalid type'})
+    right_image = fields.Str(errors={'type': 'Invalid type'})
+    front_image = fields.Str(errors={'type': 'Invalid type'})
+    back_image = fields.Str(errors={'type': 'Invalid type'})
+    plate_number = fields.Str(errors={'type': 'Invalid type'})
+    admin_confirmed = fields.Boolean(errors={'type': 'Invalid type'})
+    bank_name = fields.Str(errors={'type': 'Invalid type'})
+    account_number = fields.Str(errors={'type': 'Invalid type'})
+    driver_id = fields.Str(
+            required=True,
+            errors={
+                'required': 'Please provide a valid free ride type.',
+                'type': 'Invalid type'
+            })
+    admission_type_id = fields.Str(errors={'type': 'Invalid type'})
+    number_of_rides = fields.Integer(errors={'type': 'Invalid type'})
+    created_at = fields.DateTime(dump_only=True)
+    modified_at = fields.DateTime(dump_only=True)
+
+
 class FreeRideSchema(Schema):
     id = fields.Str(dump_only=True)
     free_ride_type = fields.Str(
@@ -147,3 +178,4 @@ user_login_schema = UserLoginSchema()
 transaction_schema = TransactionSchema()
 notification_schema = NotificationSchema()
 free_ride_schema = FreeRideSchema()
+driver_info_schema = DriverInfoSchema()
