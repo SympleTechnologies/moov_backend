@@ -155,6 +155,17 @@ class User(db.Model, ModelViewsMix):
        return db.session.query(db.exists().where(User.email==email)).scalar()
 
     @classmethod
+    def is_user_id_taken(cls, user_id):
+       return db.session.query(db.exists().where(User.user_id==user_id)).scalar()
+
+    @classmethod
+    def confirm_login(cls, email, user_id):
+        user = db.session.query(User).filter(User.email==email).first()
+        if str(user.user_id) == str(user_id):
+           return True
+        return False
+
+    @classmethod
     def get_average_ratings(cls):
         total_ratings = 0
         my_ratings = RateMe.query.filter(and_(

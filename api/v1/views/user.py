@@ -52,6 +52,7 @@ class UserResource(Resource):
         _data, _ = user_schema.dump(_user)
         _data['wallet_amount'] = _user.wallet_user[0].wallet_amount
         _data["user_type"] = user_type
+        _data.pop('user_id', None)
         return {
             'status': 'success',
             'data': { 
@@ -72,7 +73,8 @@ class UserResource(Resource):
                     'lastname', 
                     'image_url', 
                     'mobile_number',
-                    'authorization_code'
+                    'authorization_code',
+                    'user_id'
                 ]
         if validate_input_data(json_input, keys):
             return validate_input_data(json_input, keys)
@@ -82,12 +84,12 @@ class UserResource(Resource):
         if not _user:
             return moov_errors("User does not exist", 404)
 
-        if validate_empty_string(json_input["authorization_code"]) or \
-           validate_empty_string(json_input["image_url"]) or \
-           validate_empty_string(json_input["firstname"]) or \
-           validate_empty_string(json_input["lastname"]) or \
-           validate_empty_string(json_input["email"]) or \
-           validate_empty_string(json_input["mobile_number"]):
+        if ('authorization_code' in json_input and validate_empty_string(json_input["authorization_code"])) or \
+           ('image' in json_input and validate_empty_string(json_input["image_url"])) or \
+           ('firstname' in json_input and validate_empty_string(json_input["firstname"])) or \
+           ('lastname' in json_input and validate_empty_string(json_input["lastname"])) or \
+           ('email' in json_input and validate_empty_string(json_input["email"])) or \
+           ('mobile_number' in json_input and validate_empty_string(json_input["mobile_number"])):
             return moov_errors("Empty strings are not allowed, exception for image urls", 400)
 
         if _user.user_type.title ==  "super_admin" or \
@@ -102,6 +104,9 @@ class UserResource(Resource):
 
         if 'email' in json_input:
             return moov_errors('Unauthorized access, you cannot update emails', 401)
+
+        if 'user_id' in json_input:
+            return moov_errors('Unauthorized access, you cannot update user ids', 401)
 
         if 'firstname' in json_input:
             _user.firstname = json_input['firstname']
@@ -121,6 +126,7 @@ class UserResource(Resource):
 
         _user.save()
         _data, _ = user_schema.dump(_user)
+        _data.pop('user_id', None)
         return {
             'status': 'success',
             'data': {
@@ -158,8 +164,6 @@ class UserResource(Resource):
             return moov_errors("Unauthorized access. You cannot delete this user", 401)
 
         _user_to_delete.delete()
-
-
         return {
             'status': 'success',
             'data': None
@@ -178,7 +182,8 @@ class UserSignupResource(Resource):
                     'lastname', 
                     'email', 
                     'image_url', 
-                    'mobile_number'
+                    'mobile_number',
+                    'user_id'
                 ]
 
         _user = {}
@@ -189,8 +194,14 @@ class UserSignupResource(Resource):
         if errors:
             return moov_errors(errors, 422)
 
+        if validate_empty_string(json_input['user_id']):
+            return moov_errors('User id cannot be empty', 400)
+
         if User.is_user_data_taken(json_input['email']):
             return moov_errors('User already exists', 400)
+
+        if User.is_user_id_taken(json_input['user_id']):
+            return moov_errors('User id already exists', 400)
 
         if validate_empty_string(json_input["firstname"]) or \
            validate_empty_string(json_input["lastname"]) or \
@@ -220,6 +231,7 @@ class UserSignupResource(Resource):
             _transaction_icon_id = transaction_icon.id
             
         new_user = User(
+            user_id=data['user_id'],
             user_type_id=user_type_id,
             firstname=data['firstname'],
             lastname=data['lastname'],
@@ -257,6 +269,7 @@ class UserSignupResource(Resource):
         _data, _ = user_schema.dump(new_user)
         _data["wallet_amount"] = user_wallet.wallet_amount
         _data["user_type"] = new_user.user_type.title
+        _data.pop('user_id', None)
 
         if user_type.title.lower() == "driver":
             new_driver_info = DriverInfo(
@@ -288,7 +301,7 @@ class UserLoginResource(Resource):
     def post(self):
         json_input = request.get_json()
 
-        keys = ['email']
+        keys = ['email', 'user_id']
         if validate_input_data(json_input, keys):
             return validate_input_data(json_input, keys)
 
@@ -299,6 +312,9 @@ class UserLoginResource(Resource):
         _user = User.query.filter(User.email.like(json_input['email'])).first()
         if not _user:
             return moov_errors('User does not exist', 404)
+
+        if not User.confirm_login(email=json_input['email'], user_id=json_input['user_id']):
+            return moov_errors('Login unsuccesful, confirm login details', 400)
 
         _user_wallet = Wallet.query.filter(Wallet.user_id==_user.id).first()
 
@@ -312,6 +328,7 @@ class UserLoginResource(Resource):
         _data, _ = user_schema.dump(_user)
         _data["wallet_amount"] = _user_wallet.wallet_amount if _user_wallet else "Unavailable"
         _data["user_type"] = _user.user_type.title
+        _data.pop('user_id', None)
         return jsonify({"status": "success",
                         "data": {
                             "data": _data,
@@ -335,6 +352,7 @@ class UserAuthorizationResource(Resource):
         _data['user_id'] = _current_user_id
         _data['authorization_code'] = _data['authorization_code'] = _current_user.authorization_code
         _data['authorization_code_status'] = _current_user.authorization_code_status
+        _data.pop('user_id', None)
 
         return jsonify({"status": "success",
                         "data": {

@@ -6,7 +6,9 @@ from ..helper.error_message import moov_errors
 
 
 def validate_empty_string(value):
-    return value.replace(" ", "") == ""
+    if value == "" or value.strip() == "":
+        return True
+    return False
 
 def validate_type(item, input_type):
     return type(item) is input_type
