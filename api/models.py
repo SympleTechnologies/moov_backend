@@ -235,10 +235,10 @@ class DriverInfo(db.Model, ModelViewsMix):
     location_longitude = db.Column(db.Float, nullable=True)
     destination_latitude = db.Column(db.Float, nullable=True)
     destination_longitude = db.Column(db.Float, nullable=True)
-    car_slots = db.Column(db.Integer, nullable=False)
+    car_slots = db.Column(db.Integer, nullable=True)
     available_car_slots = db.Column(db.Integer, default=0)
     status = db.Column(db.Boolean, default=False)
-    on_trip_with = db.Column(json_type, nullable=True)
+    on_trip_with = db.Column(json_type, nullable=True, default={})
     car_model = db.Column(db.String)
     left_image = db.Column(db.String)
     right_image = db.Column(db.String)
@@ -256,6 +256,28 @@ class DriverInfo(db.Model, ModelViewsMix):
 
     def __repr__(self):
         return '<DriverInfo %r>' % (self.driver_id)
+
+    @classmethod
+    def add_to_trip(cls, driver_id, email, slots):
+        driver = db.session.query(Driver).filter(Driver.driver_id==driver_id).first()
+        driver.on_trip_with[email] = slots
+        driver.available_car_slots -= slots
+        driver.save()
+
+    @classmethod
+    def remove_from_trip(cls, driver_id, email):
+        driver = db.session.query(Driver).filter(Driver.driver_id==driver_id).first()
+        slots = driver.on_trip_with[email]
+        driver.available_car_slots += slots
+        driver.on_trip_with.pop(email, None)
+        driver.save()
+
+    @classmethod
+    def confirm_on_trip(cls, driver_id, email):
+        driver = db.session.query(Driver).filter(Driver.driver_id==driver_id).first()
+        if email in driver.on_trip_with:
+            return True
+        return False
 
 
 class SchoolInfo(db.Model, ModelViewsMix):
