@@ -3,6 +3,7 @@ import os
 import json
 import enum
 
+from datetime import datetime
 from alembic import op
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import backref, relationship
@@ -10,7 +11,7 @@ from sqlalchemy.orm import backref, relationship
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.types import JSON, TEXT, TypeDecorator
 from sqlalchemy import event, and_
-from datetime import datetime
+from werkzeug import generate_password_hash, check_password_hash
 
 try:
     from generator.id_generator import PushID
@@ -133,6 +134,7 @@ class User(db.Model, ModelViewsMix):
     firstname = db.Column(db.String(30), nullable=False)
     lastname = db.Column(db.String(30), nullable=False)
     email = db.Column(db.String(50), unique=True, nullable=False)
+    _password = db.Column('password', db.String())
     image_url = db.Column(db.String)
     mobile_number = db.Column(db.String, nullable=False)
     authorization_code = db.Column(db.String, unique=True)
@@ -149,6 +151,21 @@ class User(db.Model, ModelViewsMix):
 
     def __repr__(self):
         return '<User %r %r>' % (self.firstname, self.lastname)
+
+    def _get_password(self):
+      return self._password
+
+    def _set_password(self, password):
+      self._password = generate_password_hash(password)
+
+    password = db.synonym('_password',
+                          descriptor=property(_get_password,
+                                              _set_password))
+
+    def check_password(self, password):
+      if self.password is None:
+         return False
+      return check_password_hash(self.password, password)
 
     @classmethod
     def is_user_data_taken(cls, email):

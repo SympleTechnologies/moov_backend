@@ -70,12 +70,12 @@ def seed_default_data(prompt=True):
                 car_owner_user_type_id = UserType.query.filter_by(title="car_owner").first().id
 
                 # no wallet needed for admin
-                admin_user = create_user(admin_user_type_id, "admin", os.environ.get('ADMIN_EMAIL'))
-                moov = create_user(moov_user_type_id, "moov", os.environ.get('MOOV_EMAIL'))
-                school = create_user(school_user_type_id, "school", "school@email.com")
-                car_owner = create_user(car_owner_user_type_id, "school", "car_owner@email.com")
+                admin_user = create_user(admin_user_type_id, "admin", os.environ.get('ADMIN_EMAIL'), os.environ.get('ADMIN_PASSWORD'))
+                moov = create_user(moov_user_type_id, "moov", os.environ.get('MOOV_EMAIL'), os.environ.get('MOOV_PASSWORD'))
+                school = create_user(school_user_type_id, "school", "school@email.com", os.environ.get('SCHOOL_PASSWORD'))
+                car_owner = create_user(car_owner_user_type_id, "school", "car_owner@email.com", os.environ.get('CAR_OWNER_PASSWORD'))
                 admin_user.save()
-
+                
                 # seed default wallets
                 wallet_amount = 0.0
                 create_wallet(user_id=moov.id, wallet_amount=wallet_amount, description="Moov Wallet")

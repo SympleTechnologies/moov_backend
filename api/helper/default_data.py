@@ -11,10 +11,10 @@ def create_default_user_types():
         )
         user_type.save()
 
-def create_user(user_type_id, name, email):
+def create_user(user_type_id, name, email, password):
     new_user = User(
                     user_type_id=user_type_id,
-                    user_id="{0}_user_id".format(name),
+                    password=password,
                     firstname=name,
                     lastname=name,
                     image_url="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973461_1280.png",
