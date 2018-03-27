@@ -79,6 +79,29 @@ class UserLoginSchema(Schema):
         check_unknown_fields(data, original_data, self.fields)
 
 
+class ForgotPassword(Schema):
+    id = fields.Str(dump_only=True)
+    user_id = fields.Str(
+        required=True,
+        errors={
+            'required': 'User id is compulsory',
+            'type': 'Invalid type'
+        })
+    temp_password = fields.Str(
+        required=True,
+        errors={
+            'required': 'Temporary password is required',
+            'type': 'Invalid type'
+        })
+    used = fields.Bool(errors={'type': 'Invalid type'})
+    created_at = fields.DateTime(dump_only=True)
+    modified_at = fields.DateTime(dump_only=True)
+
+    @validates_schema(pass_original=True)
+    def unknown_fields(self, data, original_data):
+        check_unknown_fields(data, original_data, self.fields)
+
+
 class TransactionSchema(Schema):
     id = fields.Str(dump_only=True)
     type_of_operation = fields.Str(
@@ -176,6 +199,7 @@ class FreeRideSchema(Schema):
 
 user_schema = UserSchema()
 user_login_schema = UserLoginSchema()
+forgot_password_schema = ForgotPassword()
 transaction_schema = TransactionSchema()
 notification_schema = NotificationSchema()
 free_ride_schema = FreeRideSchema()

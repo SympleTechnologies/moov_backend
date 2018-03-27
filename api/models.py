@@ -139,8 +139,10 @@ class User(db.Model, ModelViewsMix):
     mobile_number = db.Column(db.String, nullable=False)
     authorization_code = db.Column(db.String, unique=True)
     authorization_code_status = db.Column(db.Boolean, default=False)
+    reset_password = db.Column(db.Boolean, default=False)
     number_of_rides = db.Column(db.Integer, default=0)
     ratings = db.Column(db.Integer, nullable=True)
+    forgot_password = db.relationship('ForgotPassword', backref='user_forgot_password', lazy='dynamic')
     wallet_user = db.relationship('Wallet', cascade="all,delete-orphan", back_populates='user_wallet')
     free_ride = db.relationship('FreeRide', backref='user_free_ride', lazy='dynamic')
     driver_info = db.relationship('DriverInfo', cascade="all,delete-orphan", backref='driver_information', lazy='dynamic')
@@ -208,6 +210,22 @@ class User(db.Model, ModelViewsMix):
 
         average_ratings = int(round(total_ratings / my_ratings_count, 0))
         return average_ratings 
+
+
+class ForgotPassword(db.Model, ModelViewsMix):
+  
+    __tablename__ = 'ForgotPassword'
+
+    id = db.Column(db.String, primary_key=True)
+    user_id = db.Column(db.String(), db.ForeignKey('User.id', ondelete='SET NULL'))
+    temp_password = db.Column(db.String)
+    used = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    modified_at = db.Column(db.DateTime, default=datetime.utcnow,
+            onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return '<ForgotPassword %r>' % (self.user_id)
 
 
 class UserType(db.Model, ModelViewsMix):
@@ -433,6 +451,7 @@ def fancy_id_generator(mapper, connection, target):
 tables = [
             RateMe,
             User, 
+            ForgotPassword,
             UserType, 
             Wallet, 
             Transaction, 

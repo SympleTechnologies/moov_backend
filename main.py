@@ -2,6 +2,7 @@ import os
 from os.path import join, dirname
 from dotenv import load_dotenv
 
+from flask_mail import Mail
 from flask import Flask, jsonify
 from flask_sslify import SSLify
 from flask_cors import CORS
@@ -25,6 +26,7 @@ try:
     )
     from api.v1.views.free_ride import FreeRideResource
     from api.v1.views.notification import NotificationResource
+    from api.v1.views.forgot_password import ForgotPasswordResource
 except ImportError:
     from moov_backend.config import app_configuration
     from moov_backend.api.v1.views.route import RouteResource
@@ -41,6 +43,7 @@ except ImportError:
     )
     from moov_backend.api.v1.views.free_ride import FreeRideResource
     from moov_backend.api.v1.views.notification import NotificationResource
+    from moov_backend.api.v1.views.forgot_password import ForgotPasswordResource
 
 
 dotenv_path = join(dirname(__file__), '.env')
@@ -48,7 +51,7 @@ load_dotenv(dotenv_path)
 
 
 def create_flask_app(environment):
-    app = Flask(__name__, instance_relative_config=True, static_folder=None)
+    app = Flask(__name__, instance_relative_config=True, static_folder=None, template_folder='./api/emails/templates')
     app.config.from_object(app_configuration[environment])
     app.config['BUNDLE_ERRORS'] = True
 
@@ -109,6 +112,9 @@ def create_flask_app(environment):
 
     # Notification routes
     api.add_resource(NotificationResource, '/api/v1/notification', '/api/v1/notification/', endpoint='single_notification')
+
+    # Forgot Password routes
+    api.add_resource(ForgotPasswordResource, '/api/v1/forgot_password', '/api/v1/forgot_password/', endpoint='forgot_password')
 
 
     # handle default 404 exceptions with a custom response

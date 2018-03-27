@@ -1,9 +1,10 @@
 import os
 import datetime
+from datetime import timedelta
 from os.path import join, dirname
 from dotenv import load_dotenv
 
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from flask import g, request, jsonify
 from flask_restful import Resource
 from flask_jwt import jwt
@@ -14,7 +15,7 @@ try:
     from ...helper.error_message import moov_errors, not_found_errors
     from ...models import (
         User, UserType, Wallet, Transaction, Notification, 
-        FreeRide, Icon, DriverInfo, AdmissionType
+        FreeRide, Icon, DriverInfo, AdmissionType, ForgotPassword
     )
     from ...schema import user_schema, user_login_schema, driver_info_schema
 except ImportError:
@@ -23,7 +24,7 @@ except ImportError:
     from moov_backend.api.helper.error_message import moov_errors, not_found_errors
     from moov_backend.api.models import (
         User, UserType, Wallet, Transaction, Notification, 
-        FreeRide, Icon, DriverInfo, AdmissionType
+        FreeRide, Icon, DriverInfo, AdmissionType, ForgotPassword
     )
     from moov_backend.api.schema import user_schema, user_login_schema, driver_info_schema
 
@@ -303,6 +304,7 @@ class UserLoginResource(Resource):
         
     @validate_request()
     def post(self):
+        set_temporary_password = False
         json_input = request.get_json()
 
         keys = ['email', 'password']
@@ -317,8 +319,27 @@ class UserLoginResource(Resource):
         if not _user:
             return moov_errors('User does not exist', 404)
 
-        if not _user.check_password(json_input['password']):
-            return moov_errors("Invalid email/password", 401)
+        if _user.reset_password:
+            temp_password = ForgotPassword.query.filter(
+                ForgotPassword.user_id==_user.id
+            ).order_by(
+                ForgotPassword.created_at.desc()
+            ).first()
+            print(ForgotPassword.created_at + timedelta(days=1))
+            if (not temp_password) or (temp_password and temp_password.temp_password != json_input['password']):
+                return moov_errors("Invalid password", 400)
+            if temp_password.used:
+                return moov_errors("Sorry, this password has been used to reset forgotten password details", 400)
+            if not datetime.datetime.utcnow() <= (temp_password.created_at + timedelta(days=1)):
+                return moov_errors("Temporary password expired", 400)
+            set_temporary_password = True
+            temp_password.used = True
+            _user.reset_password = False
+            temp_password.save()
+            _user.save()
+        else:
+            if not _user.check_password(json_input['password']):
+                return moov_errors("Invalid email/password", 401)
 
         _user_wallet = Wallet.query.filter(Wallet.user_id==_user.id).first()
 
@@ -332,6 +353,7 @@ class UserLoginResource(Resource):
         _data, _ = user_schema.dump(_user)
         _data["wallet_amount"] = _user_wallet.wallet_amount if _user_wallet else "Unavailable"
         _data["user_type"] = _user.user_type.title
+        _data["set_temporary_password"] = set_temporary_password
         _data.pop('password', None)
         _data.pop('user_id', None)
         return jsonify({"status": "success",
