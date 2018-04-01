@@ -94,7 +94,7 @@ class TransactionType(enum.Enum):
 
 class FreeRideType(enum.Enum):
     social_share_type = "social_share"
-    ride_type="ride"
+    ride_type = "ride"
 
 
 class RatingsType(enum.Enum):
@@ -104,6 +104,12 @@ class RatingsType(enum.Enum):
     three = 3
     four = 4
     five = 5
+
+
+class AuthenticationType(enum.Enum):
+    facebook = "facebook_type"
+    google = "google_type"
+    email = "email_type"
 
 
 # models
@@ -129,6 +135,7 @@ class User(db.Model, ModelViewsMix):
     __tablename__ = 'User'
 
     id = db.Column(db.String, primary_key=True)
+    authentication_type = db.Column(db.Enum(AuthenticationType))
     user_type_id = db.Column(db.String(), db.ForeignKey('UserType.id', ondelete='SET NULL'))
     user_id = db.Column(db.String, unique=True)
     firstname = db.Column(db.String(30), nullable=False)

@@ -13,6 +13,7 @@ try:
     from ...auth.token import token_required
     from ...auth.validation import validate_request, validate_input_data, validate_empty_string
     from ...helper.error_message import moov_errors, not_found_errors
+    from ...helper.user_helper import get_authentication_type
     from ...models import (
         User, UserType, Wallet, Transaction, Notification, 
         FreeRide, Icon, DriverInfo, AdmissionType, ForgotPassword
@@ -22,6 +23,7 @@ except ImportError:
     from moov_backend.api.auth.token import token_required
     from moov_backend.api.auth.validation import validate_request, validate_input_data, validate_empty_string
     from moov_backend.api.helper.error_message import moov_errors, not_found_errors
+    from moov_backend.api.helper.user_helper import get_authentication_type
     from moov_backend.api.models import (
         User, UserType, Wallet, Transaction, Notification, 
         FreeRide, Icon, DriverInfo, AdmissionType, ForgotPassword
@@ -189,7 +191,8 @@ class UserSignupResource(Resource):
                     'email', 
                     'image_url', 
                     'mobile_number',
-                    'password'
+                    'password',
+                    'authentication_type'
                 ]
 
         _user = {}
@@ -210,6 +213,7 @@ class UserSignupResource(Resource):
            (json_input.get('lastname') and validate_empty_string(json_input["lastname"])) or \
            (json_input.get('email') and validate_empty_string(json_input["email"])) or \
            (json_input.get('password') and validate_empty_string(json_input["password"])) or \
+           (json_input.get('authentication_type') and validate_empty_string(json_input["authentication_type"])) or \
            (json_input.get('mobile_number') and validate_empty_string(json_input["mobile_number"])):
             return moov_errors("Empty strings are not allowed, exception for image urls", 400)
 
@@ -233,10 +237,14 @@ class UserSignupResource(Resource):
         transaction_icon = Icon.query.filter(Icon.operation_type=="moov_operation").first()
         if transaction_icon:
             _transaction_icon_id = transaction_icon.id
+
+        authentication_type = "email" if "authentication_type" not in json_input else json_input['authentication_type']
+        authentication_type = get_authentication_type(authentication_type)
             
         new_user = User(
             password=data['password'],
             user_type_id=user_type_id,
+            authentication_type=authentication_type,
             firstname=data['firstname'],
             lastname=data['lastname'],
             email=data['email'],
@@ -325,13 +333,15 @@ class UserLoginResource(Resource):
             ).order_by(
                 ForgotPassword.created_at.desc()
             ).first()
-            print(ForgotPassword.created_at + timedelta(days=1))
+
+            # Precautions
             if (not temp_password) or (temp_password and temp_password.temp_password != json_input['password']):
                 return moov_errors("Invalid password", 400)
             if temp_password.used:
                 return moov_errors("Sorry, this password has been used to reset forgotten password details", 400)
             if not datetime.datetime.utcnow() <= (temp_password.created_at + timedelta(days=1)):
                 return moov_errors("Temporary password expired", 400)
+
             set_temporary_password = True
             temp_password.used = True
             _user.reset_password = False

@@ -47,6 +47,7 @@ class UserSchema(Schema):
             'type': 'Invalid type'
         })
     user_id = fields.Str(errors={'type': 'Invalid type'})
+    authentication_type = fields.Str(errors={'type': 'Invalid type'})
     image_url = fields.Str(errors={'type': 'Invalid type'})
     authorization_code = fields.Str(errors={'type': 'Invalid type'})
     authorization_code_status = fields.Bool(errors={'type': 'Invalid type'})
