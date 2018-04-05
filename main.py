@@ -94,7 +94,7 @@ def create_flask_app(environment):
                         endpoint='user_authorization_endpoint')
 
     # Driver routes
-    api.add_resource(DriverResource, '/api/v1/driver', '/api/v1/driver/', endpoint='driver_endpoint')
+    api.add_resource(DriverResource, '/api/v1/driver', '/api/v1/driver/', endpoint='single_driver')
 
     # Authentication routes
     api.add_resource(UserSignupResource, '/api/v1/signup', '/api/v1/signup/', endpoint='singup_user')

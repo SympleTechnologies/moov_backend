@@ -12,6 +12,7 @@ from flask_jwt import jwt
 try:
     from ...auth.token import token_required
     from ...auth.validation import validate_request, validate_input_data, validate_empty_string
+    from ...helper.common_helper import is_empty_request_fields, is_user_type_authorized
     from ...helper.error_message import moov_errors, not_found_errors
     from ...helper.user_helper import get_authentication_type
     from ...models import (
@@ -21,7 +22,8 @@ try:
     from ...schema import user_schema, user_login_schema, driver_info_schema
 except ImportError:
     from moov_backend.api.auth.token import token_required
-    from moov_backend.api.auth.validation import validate_request, validate_input_data, validate_empty_string
+    from moov_backend.api.auth.validation import validate_request, validate_input_data
+    from moov_backend.api.helper.common_helper import is_empty_request_fields
     from moov_backend.api.helper.error_message import moov_errors, not_found_errors
     from moov_backend.api.helper.user_helper import get_authentication_type
     from moov_backend.api.models import (
@@ -88,47 +90,28 @@ class UserResource(Resource):
         if not _user:
             return moov_errors("User does not exist", 404)
 
-        if ('authorization_code' in json_input and validate_empty_string(json_input["authorization_code"])) or \
-           ('image' in json_input and validate_empty_string(json_input["image_url"])) or \
-           ('firstname' in json_input and validate_empty_string(json_input["firstname"])) or \
-           ('lastname' in json_input and validate_empty_string(json_input["lastname"])) or \
-           ('email' in json_input and validate_empty_string(json_input["email"])) or \
-           ('mobile_number' in json_input and validate_empty_string(json_input["mobile_number"])):
+        if is_empty_request_fields(json_input):
             return moov_errors("Empty strings are not allowed, exception for image urls", 400)
 
-        if _user.user_type.title ==  "super_admin" or \
-           _user.user_type.title == "admin" or \
-           _user.user_type.title == "school" or \
-           _user.user_type.title == "car_owner" or \
-           _user.user_type.title == "moov":
+        unauthorized_list = ["super_admin", "admin", "school", "car_owner", "moov"]
+        if is_user_type_authorized(unauthorized_list, _user.user_type.title):
             return moov_errors("Unauthorized access", 401)
 
-        if 'user_type' in json_input:
-            return moov_errors('Unauthorized access, you cannot update user types', 401)
+        for key in json_input.keys():
+            if key == 'user_type':
+                return moov_errors('Unauthorized access, you cannot update user types', 401)
+                
+            if key == 'email':
+                return moov_errors('Unauthorized access, you cannot update emails', 401)
 
-        if 'email' in json_input:
-            return moov_errors('Unauthorized access, you cannot update emails', 401)
+            if key == 'password':
+                if _user.check_password(json_input['password']):
+                  return moov_errors('Unauthorized, you cannot update with the same password', 401)
 
-        if 'password' in json_input:
-            if _user.check_password(json_input['password']):
-                return moov_errors('Unauthorized, you cannot update with the same password', 401)
-            _user.password = json_input['password']
+            if key == 'authorization_code':
+                _user.__setitem__("authorization_code_status", True)
 
-        if 'firstname' in json_input:
-            _user.firstname = json_input['firstname']
-
-        if 'lastname' in json_input:
-            _user.lastname = json_input['lastname']
-
-        if 'image_url' in json_input:
-            _user.image_url = json_input['image_url']
-
-        if 'mobile_number' in json_input:
-            _user.mobile_number = json_input['mobile_number']
-
-        if 'authorization_code' in json_input:
-            _user.authorization_code = json_input['authorization_code']
-            _user.authorization_code_status = True
+            _user.__setitem__(key, json_input[key])
 
         _user.save()
         _data, _ = user_schema.dump(_user)
@@ -209,21 +192,14 @@ class UserSignupResource(Resource):
         if User.is_user_data_taken(json_input['email']):
             return moov_errors('User already exists', 400)
 
-        if (json_input.get('firstname') and validate_empty_string(json_input["firstname"])) or \
-           (json_input.get('lastname') and validate_empty_string(json_input["lastname"])) or \
-           (json_input.get('email') and validate_empty_string(json_input["email"])) or \
-           (json_input.get('password') and validate_empty_string(json_input["password"])) or \
-           (json_input.get('authentication_type') and validate_empty_string(json_input["authentication_type"])) or \
-           (json_input.get('mobile_number') and validate_empty_string(json_input["mobile_number"])):
+        if is_empty_request_fields(json_input):
             return moov_errors("Empty strings are not allowed, exception for image urls", 400)
 
         user_type = UserType.query.filter(UserType.title==data['user_type'].lower()).first()
         user_type_id = user_type.id if user_type else None
-        if data['user_type'].lower() == "super_admin" or \
-           data['user_type'].lower() == "admin" or \
-           data['user_type'].lower() == "school" or \
-           data['user_type'].lower() == "car_owner" or \
-           data['user_type'].lower() == "moov":
+
+        unauthorized_list = ["super_admin", "admin", "school", "car_owner", "moov"]
+        if is_user_type_authorized(unauthorized_list, data['user_type'].lower()):
             return moov_errors("Unauthorized, you cannot create a/an {0}".format(data['user_type']), 401)
         if not user_type_id:
             return moov_errors("User type can only be student or driver", 400)

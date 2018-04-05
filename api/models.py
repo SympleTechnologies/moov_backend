@@ -142,13 +142,14 @@ class User(db.Model, ModelViewsMix):
     lastname = db.Column(db.String(30), nullable=False)
     email = db.Column(db.String(50), unique=True, nullable=False)
     _password = db.Column('password', db.String())
+    _ratings = db.Column('ratings', db.Integer)
+    # ratings = db.Column(db.Integer, nullable=True)
     image_url = db.Column(db.String)
     mobile_number = db.Column(db.String, nullable=False)
     authorization_code = db.Column(db.String, unique=True)
     authorization_code_status = db.Column(db.Boolean, default=False)
     reset_password = db.Column(db.Boolean, default=False)
     number_of_rides = db.Column(db.Integer, default=0)
-    ratings = db.Column(db.Integer, nullable=True)
     forgot_password = db.relationship('ForgotPassword', backref='user_forgot_password', lazy='dynamic')
     wallet_user = db.relationship('Wallet', cascade="all,delete-orphan", back_populates='user_wallet')
     free_ride = db.relationship('FreeRide', backref='user_free_ride', lazy='dynamic')
@@ -161,15 +162,58 @@ class User(db.Model, ModelViewsMix):
     def __repr__(self):
         return '<User %r %r>' % (self.firstname, self.lastname)
 
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __setitem__(self, key, item):
+        return setattr(self, key, item)
+    
     def _get_password(self):
-      return self._password
+        return self._password
 
     def _set_password(self, password):
-      self._password = generate_password_hash(password)
+        self._password = generate_password_hash(password)
 
     password = db.synonym('_password',
-                          descriptor=property(_get_password,
-                                              _set_password))
+                        descriptor=property(_get_password,
+                                            _set_password))
+
+    def _get_ratings(self):
+        self._ratings = self.get_average_ratings() 
+        return self._ratings
+
+    def _set_ratings(self):
+        self._ratings = self.get_average_ratings() 
+
+    ratings = db.synonym('_ratings',
+                        descriptor=property(_get_ratings,
+                                            _set_ratings))
+
+    def get_average_ratings(self):
+        total_ratings = 0
+        my_ratings = RateMe.query.filter(and_(
+                        RateMe.ratee_id==str(self.id),
+                        RateMe.rating_type!=RatingsType.no_ratings
+                    )).all()
+
+        my_ratings_count = len(my_ratings)
+        if my_ratings_count == 0:
+            return None
+
+        for rating in my_ratings:
+            if rating.rating_type == RatingsType.one:
+                total_ratings += 1
+            if rating.rating_type == RatingsType.two:
+                total_ratings += 2
+            if rating.rating_type == RatingsType.three:
+                total_ratings += 3
+            if rating.rating_type == RatingsType.four:
+                total_ratings += 4
+            if rating.rating_type == RatingsType.five:
+                total_ratings += 5
+
+        average_ratings = int(round(total_ratings / my_ratings_count, 0))
+        return average_ratings 
 
     def check_password(self, password):
       if self.password is None:
@@ -190,33 +234,6 @@ class User(db.Model, ModelViewsMix):
         if str(user.user_id) == str(user_id):
            return True
         return False
-
-    @classmethod
-    def get_average_ratings(cls):
-        total_ratings = 0
-        my_ratings = RateMe.query.filter(and_(
-                        RateMe.ratee_id==User.id,
-                        RateMe.rating!="RatingsType.no_ratings"
-                    )).all()
-
-        my_ratings_count = len(my_ratings)
-        if my_ratings_count == 0:
-            return None
-
-        for rating in my_ratings:
-            if rating.rating_type == "RatingsType.one":
-                total_ratings += 1
-            if rating.rating_type == "RatingsType.two":
-                total_ratings += 2
-            if rating.rating_type == "RatingsType.three":
-                total_ratings += 3
-            if rating.rating_type == "RatingsType.four":
-                total_ratings += 4
-            if rating.rating_type == "RatingsType.five":
-                total_ratings += 5
-
-        average_ratings = int(round(total_ratings / my_ratings_count, 0))
-        return average_ratings 
 
 
 class ForgotPassword(db.Model, ModelViewsMix):
@@ -298,6 +315,12 @@ class DriverInfo(db.Model, ModelViewsMix):
 
     def __repr__(self):
         return '<DriverInfo %r>' % (self.driver_id)
+
+    def __getitem__(self, key):
+      return getattr(self, key)
+
+    def __setitem__(self, key, item):
+      return setattr(self, key, item)
 
     @classmethod
     def add_to_trip(cls, driver_id, email, slots):
