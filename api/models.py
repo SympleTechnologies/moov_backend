@@ -143,7 +143,6 @@ class User(db.Model, ModelViewsMix):
     email = db.Column(db.String(50), unique=True, nullable=False)
     _password = db.Column('password', db.String())
     _ratings = db.Column('ratings', db.Integer)
-    # ratings = db.Column(db.Integer, nullable=True)
     image_url = db.Column(db.String)
     mobile_number = db.Column(db.String, nullable=False)
     authorization_code = db.Column(db.String, unique=True)
@@ -295,9 +294,9 @@ class DriverInfo(db.Model, ModelViewsMix):
     destination_latitude = db.Column(db.Float, nullable=True)
     destination_longitude = db.Column(db.Float, nullable=True)
     car_slots = db.Column(db.Integer, nullable=True)
-    available_car_slots = db.Column(db.Integer, default=0)
+    available_car_slots = db.Column(db.Integer)
     status = db.Column(db.Boolean, default=False)
-    on_trip_with = db.Column(json_type, nullable=True, default={})
+    on_trip_with = db.Column(json_type, nullable=True, default=None)
     car_model = db.Column(db.String)
     left_image = db.Column(db.String)
     right_image = db.Column(db.String)
@@ -324,17 +323,26 @@ class DriverInfo(db.Model, ModelViewsMix):
 
     @classmethod
     def add_to_trip(cls, driver_id, email, slots):
-        driver = db.session.query(Driver).filter(Driver.driver_id==driver_id).first()
-        driver.on_trip_with[email] = slots
+        driver = db.session.query(DriverInfo).filter(DriverInfo.driver_id==driver_id).first()
+        if not driver.on_trip_with:
+            driver.on_trip_with = {}
+
+        obj = {}
+        for key in driver.on_trip_with:
+            obj[str(key)] = driver.on_trip_with[key]
+        obj[email] = slots
+        driver.on_trip_with = obj
         driver.available_car_slots -= slots
         driver.save()
 
     @classmethod
     def remove_from_trip(cls, driver_id, email):
-        driver = db.session.query(Driver).filter(Driver.driver_id==driver_id).first()
+        driver = db.session.query(DriverInfo).filter(DriverInfo.driver_id==driver_id).first()
         slots = driver.on_trip_with[email]
         driver.available_car_slots += slots
         driver.on_trip_with.pop(email, None)
+        if not driver.on_trip_with:
+            driver.on_trip_with = None
         driver.save()
 
     @classmethod
