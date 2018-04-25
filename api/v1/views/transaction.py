@@ -11,6 +11,7 @@ try:
     from ...generator.free_ride_token_generator import generate_free_ride_token
     from ...helper.error_message import moov_errors, not_found_errors
     from ...helper.user_helper import get_user
+    from ...helper.school_helper import get_school
     from ...helper.wallet_helper import get_wallet
     from ...helper.percentage_price_helper import get_percentage_price
     from ...helper.notification_helper import save_notification
@@ -29,6 +30,7 @@ except ImportError:
     from moov_backend.api.auth.validation import validate_request, validate_input_data
     from moov_backend.api.helper.error_message import moov_errors, not_found_errors
     from moov_backend.api.helper.user_helper import get_user
+    from moov_backend.api.helper.school_helper import get_school
     from moov_backend.api.helper.wallet_helper import get_wallet
     from moov_backend.api.helper.percentage_price_helper import get_percentage_price
     from moov_backend.api.helper.notification_helper import save_notification
@@ -106,7 +108,7 @@ class TransactionResource(Resource):
     def post(self):
         json_input = request.get_json()
         
-        keys = ['type_of_operation', 'cost_of_transaction', 'receiver_email', 'school_email', 'car_owner_email', 'free_token']
+        keys = ['type_of_operation', 'cost_of_transaction', 'receiver_email', 'school_name', 'car_owner_email', 'free_token']
 
         _transaction = {}
         if validate_input_data(json_input, keys, _transaction):
@@ -186,7 +188,7 @@ class TransactionResource(Resource):
                 if str(_receiver.id) == str(_sender_id):
                     return moov_errors("Unauthorized. A user cannot transfer to him/herself", 401)
                 
-                transfer_percentage_price = (get_percentage_price(title="transfer")).price
+                transfer_percentage_price = (get_percentage_price(title="default_transfer")).price
                 transfer_charge = transfer_percentage_price * cost_of_transaction
                 sender_amount_after_transaction = _sender_wallet.wallet_amount - cost_of_transaction - transfer_charge
 
@@ -281,15 +283,17 @@ class TransactionResource(Resource):
                     # increments the number of rides taken by a user
                     _sender.number_of_rides += 1
 
-                    if "school_email" not in json_input:
-                        return moov_errors("school_email field is compulsory for ride fare", 400)
+                    if "school_name" not in json_input:
+                        return moov_errors("school_name field is compulsory for ride fare", 400)
+                    
+                    school = get_school(json_input["school_name"])
+                    if not school:
+                        return not_found_errors(json_input["school_name"])
 
-                    if not get_user(json_input["school_email"]):
-                        return not_found_errors(json_input["school_email"])
-
-                    school_email = json_input["school_email"]
+                    school_email = school.email
                     car_owner_email = os.environ.get("CAR_OWNER_EMAIL") if ("car_owner" not in json_input) else json_input["car_owner"]
-                    if not get_user(car_owner_email):
+                    car_owner = get_user(car_owner_email)
+                    if not car_owner:
                         return not_found_errors(car_owner_email)
 
                     moov_wallet = get_wallet(email=moov_email)
@@ -303,12 +307,20 @@ class TransactionResource(Resource):
                     if not car_owner_wallet:
                         return not_found_errors(car_owner_email)
 
-                    driver_percentage_price_info = get_percentage_price(title="driver")
-                    school_percentage_price_info = get_percentage_price(title=school_email)
-                    car_owner_percentage_price_info = get_percentage_price(title=car_owner_email)
+                    # change here in case percentage cut is dynamic for drivers of different schools
+                    driver_percentage_price_info = get_percentage_price(title="default_driver")
+                    if not driver_percentage_price_info:
+                        # ignore repitition from above for now
+                        driver_percentage_price_info = get_percentage_price(title="default_driver")  
+                    school_percentage_price_info = get_percentage_price(title=school.email)
+                    if not school_percentage_price_info:
+                        school_percentage_price_info = get_percentage_price(title="default_school")          
+                    car_owner_percentage_price_info = get_percentage_price(title=car_owner.email)
+                    if not car_owner_percentage_price_info:
+                        car_owner_percentage_price_info = get_percentage_price(title="default_car_owner")  
 
                     if not car_owner_percentage_price_info or not school_percentage_price_info:
-                        return moov_errors("Percentage price was not set for the school or car_owner ({0}, {1})".format(school_email, car_owner_email), 400)
+                        return moov_errors("Percentage price was not set for the school or car_owner ({0}, {1})".format(school.name, car_owner_email), 400)
 
                     # free ride generation
                     free_ride_token = get_free_ride_token(_sender)

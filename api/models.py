@@ -137,7 +137,8 @@ class User(db.Model, ModelViewsMix):
     id = db.Column(db.String, primary_key=True)
     authentication_type = db.Column(db.Enum(AuthenticationType))
     user_type_id = db.Column(db.String(), db.ForeignKey('UserType.id', ondelete='SET NULL'))
-    user_id = db.Column(db.String, unique=True)
+    user_id = db.Column(db.String, unique=True) 
+    school_id = db.Column(db.String(), db.ForeignKey('SchoolInfo.id', ondelete='SET NULL'))
     firstname = db.Column(db.String(30), nullable=False)
     lastname = db.Column(db.String(30), nullable=False)
     email = db.Column(db.String(50), unique=True, nullable=False)
@@ -147,14 +148,12 @@ class User(db.Model, ModelViewsMix):
     mobile_number = db.Column(db.String, nullable=False)
     authorization_code = db.Column(db.String, unique=True)
     authorization_code_status = db.Column(db.Boolean, default=False)
-    reset_password = db.Column(db.Boolean, default=False)
     number_of_rides = db.Column(db.Integer, default=0)
+    reset_password = db.Column(db.Boolean, default=False)
     forgot_password = db.relationship('ForgotPassword', backref='user_forgot_password', lazy='dynamic')
     wallet_user = db.relationship('Wallet', cascade="all,delete-orphan", back_populates='user_wallet')
     free_ride = db.relationship('FreeRide', backref='user_free_ride', lazy='dynamic')
     driver_info = db.relationship('DriverInfo', cascade="all,delete-orphan", backref='driver_information', lazy='dynamic')
-    school_info = db.relationship('SchoolInfo', cascade="all,delete-orphan", backref='school_information', lazy='dynamic')
-    admission_type = db.relationship('AdmissionType', backref='school_admission_type', lazy='dynamic')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -241,6 +240,7 @@ class ForgotPassword(db.Model, ModelViewsMix):
 
     id = db.Column(db.String, primary_key=True)
     user_id = db.Column(db.String(), db.ForeignKey('User.id', ondelete='SET NULL'))
+    school_id = db.Column(db.String(), db.ForeignKey('SchoolInfo.id', ondelete='SET NULL'))
     temp_password = db.Column(db.String)
     used = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -259,6 +259,7 @@ class UserType(db.Model, ModelViewsMix):
     title = db.Column(db.String, unique=True)
     description = db.Column(db.String, nullable=True)
     users = db.relationship('User', backref='user_type', lazy='dynamic')
+    schools = db.relationship('SchoolInfo', backref='school_info_type', lazy='dynamic')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow,
             onupdate=datetime.utcnow)
@@ -358,15 +359,36 @@ class SchoolInfo(db.Model, ModelViewsMix):
     __tablename__ = "SchoolInfo"
 
     id = db.Column(db.String, primary_key=True)
-    school_id = db.Column(db.String(), db.ForeignKey('User.id'), unique=True)
-    account_number = db.Column(db.String)
-    bank_name = db.Column(db.String)
+    name = db.Column(db.String, unique=True, nullable=False)
+    alias = db.Column(db.String)
+    _password = db.Column('password', db.String())
+    admin_status = db.Column(db.Boolean)
+    email = db.Column(db.String, unique=True, nullable=False)
+    user_type_id = db.Column(db.String(), db.ForeignKey('UserType.id', ondelete='SET NULL'))
+    reset_password = db.Column(db.Boolean, default=False)
+    account_number = db.Column(db.String, nullable=False)
+    bank_name = db.Column(db.String, nullable=False)
     mobile_number = db.Column(db.String)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    wallet_school = db.relationship('Wallet', cascade="all,delete-orphan", back_populates='school_wallet')
+    forgot_password = db.relationship('ForgotPassword', backref='school_forgot_password', lazy='dynamic')
+    admission_type = db.relationship('AdmissionType', backref='school_admission_type', lazy='dynamic')
+    percentage_price = db.relationship('PercentagePrice', cascade="all,delete-orphan", backref='price_information', lazy='dynamic')
+    school_info = db.relationship('User', backref='school_information', lazy='dynamic')
 
     def __repr__(self):
-        return '<SchoolInfo %r>' % (self.school_id)
+        return '<SchoolInfo %r>' % (self.name)
+
+    def _get_password(self):
+        return self._password
+
+    def _set_password(self, password):
+        self._password = generate_password_hash(password)
+
+    password = db.synonym('_password',
+                        descriptor=property(_get_password,
+                                            _set_password))
 
 
 class AdmissionType(db.Model, ModelViewsMix):
@@ -376,10 +398,10 @@ class AdmissionType(db.Model, ModelViewsMix):
     id = db.Column(db.String, primary_key=True)
     admission_type = db.Column(db.String, unique=True)
     description = db.Column(db.String)
-    school_id = db.Column(db.String(), db.ForeignKey('User.id', ondelete='SET NULL'), unique=True)
-    driver_info = db.relationship('DriverInfo', backref='admission_driver_info', lazy='dynamic')
+    school_id = db.Column(db.String(), db.ForeignKey('SchoolInfo.id', ondelete='SET NULL'), unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    driver_info = db.relationship('DriverInfo', backref='admission_driver_info', lazy='dynamic')
 
     def __repr__(self):
         return '<AdmissionType %r>' % (self.admission_type)
@@ -393,6 +415,7 @@ class PercentagePrice(db.Model, ModelViewsMix):
     title = db.Column(db.String, unique=True)
     price = db.Column(db.Float, nullable=False)
     description = db.Column(db.String, nullable=True)
+    school_id = db.Column(db.String(), db.ForeignKey('SchoolInfo.id'), unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow,
             onupdate=datetime.utcnow)
@@ -408,7 +431,9 @@ class Wallet(db.Model, ModelViewsMix):
     id = db.Column(db.String, primary_key=True)
     wallet_amount =  db.Column(db.Float, default=0.00)
     user_id = db.Column(db.String(), db.ForeignKey('User.id'))
+    school_id = db.Column(db.String(), db.ForeignKey('SchoolInfo.id'))
     user_wallet = db.relationship('User', back_populates='wallet_user')
+    school_wallet = db.relationship('SchoolInfo', back_populates='wallet_school')
     description = db.Column(db.String, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

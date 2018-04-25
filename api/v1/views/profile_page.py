@@ -42,6 +42,7 @@ class BasicInfoResource(Resource):
 
         _user_data, _ = user_schema.dump(_user)
         _user_data['wallet_amount'] = _user.wallet_user[0].wallet_amount
+        _user_data["school"] = str(_user.school_information.name)
         _user_data["user_type"] = _user_type
         _user_data.pop('password', None)
         _user_data.pop('user_id', None)

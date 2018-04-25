@@ -1,7 +1,9 @@
 import os
+import logging
 
 from flask_script import Manager, Server, prompt_bool, Shell
 from flask_migrate import MigrateCommand
+from logging.handlers import RotatingFileHandler
 from sqlalchemy.exc import SQLAlchemyError
 
 from main import create_flask_app
@@ -9,13 +11,13 @@ from main import create_flask_app
 try:
     from api.helper.default_data import (
         create_user, create_default_user_types, create_percentage_price,
-        create_wallet, create_admission_type, create_icon
+        create_wallet, create_admission_type, create_icon, create_school
     )
     from api.models import db, UserType, User, Wallet
 except ImportError:
     from moov_backend.api.helper.default_data import (
         create_user, create_default_user_types, create_percentage_price,
-        create_wallet, create_admission_type, create_icon
+        create_wallet, create_admission_type, create_icon, create_school
     )
     from moov_backend.api.models import db, UserType, User, Wallet
 
@@ -72,9 +74,12 @@ def seed_default_data(prompt=True):
                 # no wallet needed for admin
                 admin_user = create_user(admin_user_type_id, "admin", os.environ.get('ADMIN_EMAIL'), os.environ.get('ADMIN_PASSWORD'))
                 moov = create_user(moov_user_type_id, "moov", os.environ.get('MOOV_EMAIL'), os.environ.get('MOOV_PASSWORD'))
-                school = create_user(school_user_type_id, "school", "school@email.com", os.environ.get('SCHOOL_PASSWORD'))
+                # school = create_user(school_user_type_id, "school", "school@email.com", os.environ.get('SCHOOL_PASSWORD'))
                 car_owner = create_user(car_owner_user_type_id, "school", "car_owner@email.com", os.environ.get('CAR_OWNER_PASSWORD'))
                 admin_user.save()
+
+                # seed default school
+                school = create_school(user_type_id=school_user_type_id)
                 
                 # seed default wallets
                 wallet_amount = 0.0
@@ -83,11 +88,11 @@ def seed_default_data(prompt=True):
                 create_wallet(user_id=car_owner.id, wallet_amount=wallet_amount, description="Car Owner Wallet")
 
                 # seed percentage prices
-                create_percentage_price(title="car_owner@email.com", price=0.1, description="Car owner")
-                create_percentage_price(title="school@email.com", price=0.1, description="School")
-                create_percentage_price(title="driver", price=0.4, description="Driver")
-                create_percentage_price(title="moov", price=0.4, description="Moov")
-                create_percentage_price(title="transfer", price=0.0, description="Transfer")
+                create_percentage_price(title="default_car_owner", price=0.1, description="Car owner")
+                create_percentage_price(title="default_school", price=0.1, description="School")
+                create_percentage_price(title="default_driver", price=0.4, description="Driver")
+                create_percentage_price(title="default_moov", price=0.4, description="Moov")
+                create_percentage_price(title="default_transfer", price=0.0, description="Transfer")
 
                 # seed default admission type
                 create_admission_type()
@@ -115,5 +120,17 @@ def seed_default_data(prompt=True):
     else:
         print("\n\n\tAborting... Invalid environment '{}'.\n\n"
               .format(environment))
+
+# initialize the log handler
+handler = RotatingFileHandler('errors.log', maxBytes=10000000, backupCount=5)
+formatter = logging.Formatter( "%(asctime)s | %(pathname)s:%(lineno)d | %(funcName)s | %(levelname)s | %(message)s ")
+# set the log handler level
+handler.setLevel(logging.INFO)
+# set the app logger level
+app.logger.setLevel(logging.INFO)
+werkzeug_handler = logging.getLogger('werkzeug')
+handler.setFormatter(formatter)
+app.logger.addHandler(handler)
+app.logger.addHandler(werkzeug_handler)
 
 manager.run()

@@ -3,7 +3,7 @@ try:
     from ..models import User, AuthenticationType
 except ImportError:
     from moov_backend.api.helper.error_message import moov_errors
-    from moov_backend.api.models import User, AuthenticationType
+    from moov_backend.api.models import User, SchoolInfo, AuthenticationType
 
 # get any user by email
 def get_user(email):

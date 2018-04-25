@@ -1,6 +1,6 @@
 import os
 
-from ..models import User, UserType, PercentagePrice, Wallet, AdmissionType, Icon
+from ..models import User, UserType, PercentagePrice, Wallet, AdmissionType, Icon, SchoolInfo
 
 def create_default_user_types():
     user_types = ['admin', 'driver', 'student', 'moov', 'school', 'car_owner']
@@ -45,6 +45,18 @@ def create_admission_type():
                             description="default admission type"
                         )
     return new_admission_type.save()
+
+def create_school(user_type_id):
+    new_school = SchoolInfo(
+                            name="default_school",
+                            alias="school",
+                            password=os.environ.get('SCHOOL_PASSWORD'),
+                            admin_status=True,
+                            email=os.environ.get('SCHOOL_EMAIL'),
+                            user_type_id=user_type_id
+                        )
+    new_school.save()
+    return new_school
 
 def create_icon(icon, operation_type):
     new_icon = Icon(

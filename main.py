@@ -128,7 +128,7 @@ def create_flask_app(environment):
         response.status_code = 404
         return response
 
-    # handle default 500 exceptions with a custom response
+    # both error handlers below handle default 500 exceptions with a custom response
     @app.errorhandler(500)
     def internal_server_error(error):
         response = jsonify(dict(status=error,error='Internal Server Error',
@@ -136,6 +136,19 @@ def create_flask_app(environment):
                     ' unable to complete your request.  Either the server is'
                     ' overloaded or there is an error in the application'))
         response.status_code = 500
+        return response
+
+    @app.errorhandler(Exception)
+    def unhandled_exception(error):
+        response = jsonify(dict(
+            status='error',
+            data={
+                'error': 'Unhandle Error',
+                'message': 'The server encountered an internal error and was unable to complete your request.'
+            }
+        ))
+        response.status_code = 500
+        app.logger.error(repr(error))
         return response
 
     return app

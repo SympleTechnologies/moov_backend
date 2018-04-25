@@ -56,6 +56,7 @@ class UserResource(Resource):
 
         _data, _ = user_schema.dump(_user)
         _data['wallet_amount'] = _user.wallet_user[0].wallet_amount
+        _data["school"] = str(_user.school_information.name)
         _data["user_type"] = user_type
         _data.pop('password', None)
         _data.pop('user_id', None)
@@ -116,6 +117,7 @@ class UserResource(Resource):
         _user.save()
         _data, _ = user_schema.dump(_user)
         _data["user_type"] = _user.user_type.title
+        _data["school"] = str(_user.school_information.name)
         _data.pop('password', None)
         _data.pop('user_id', None)
         return {
@@ -256,6 +258,7 @@ class UserSignupResource(Resource):
 
         _data, _ = user_schema.dump(new_user)
         _data["wallet_amount"] = user_wallet.wallet_amount
+        _data["school"] = str(_user.school_information.name)
         _data["user_type"] = new_user.user_type.title
         _data.pop('password', None)
         _data.pop('user_id', None)
@@ -338,6 +341,7 @@ class UserLoginResource(Resource):
 
         _data, _ = user_schema.dump(_user)
         _data["wallet_amount"] = _user_wallet.wallet_amount if _user_wallet else "Unavailable"
+        _data["school"] = str(_user.school_information.name)
         _data["user_type"] = _user.user_type.title
         _data["set_temporary_password"] = set_temporary_password
         _data.pop('password', None)
