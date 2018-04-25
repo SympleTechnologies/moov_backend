@@ -15,6 +15,7 @@ try:
     from ...helper.common_helper import is_empty_request_fields, is_user_type_authorized
     from ...helper.error_message import moov_errors, not_found_errors
     from ...helper.user_helper import get_authentication_type
+    from ...helper.school_helper import get_school
     from ...models import (
         User, UserType, Wallet, Transaction, Notification, 
         FreeRide, Icon, DriverInfo, AdmissionType, ForgotPassword
@@ -26,6 +27,7 @@ except ImportError:
     from moov_backend.api.helper.common_helper import is_empty_request_fields
     from moov_backend.api.helper.error_message import moov_errors, not_found_errors
     from moov_backend.api.helper.user_helper import get_authentication_type
+    from moov_backend.api.helper.school_helper import get_school
     from moov_backend.api.models import (
         User, UserType, Wallet, Transaction, Notification, 
         FreeRide, Icon, DriverInfo, AdmissionType, ForgotPassword
@@ -177,7 +179,8 @@ class UserSignupResource(Resource):
                     'image_url', 
                     'mobile_number',
                     'password',
-                    'authentication_type'
+                    'authentication_type',
+                    'school'
                 ]
 
         _user = {}
@@ -191,11 +194,18 @@ class UserSignupResource(Resource):
         if validate_empty_string(json_input['password']):
             return moov_errors('Password cannot be empty', 400)
 
+        # verify email
         if User.is_user_data_taken(json_input['email']):
             return moov_errors('User already exists', 400)
 
+        # verify empty request fields
         if is_empty_request_fields(json_input):
             return moov_errors("Empty strings are not allowed, exception for image urls", 400)
+
+        # verify school
+        school = get_school(str(json_input['school']).lower())
+        if not school:
+            return moov_errors('{0} (school) does not exist'.format(str(json_input['school'])), 400)
 
         user_type = UserType.query.filter(UserType.title==data['user_type'].lower()).first()
         user_type_id = user_type.id if user_type else None
@@ -221,6 +231,7 @@ class UserSignupResource(Resource):
             
         new_user = User(
             password=data['password'],
+            school_id=school.id,
             user_type_id=user_type_id,
             authentication_type=authentication_type,
             firstname=data['firstname'],
@@ -258,7 +269,7 @@ class UserSignupResource(Resource):
 
         _data, _ = user_schema.dump(new_user)
         _data["wallet_amount"] = user_wallet.wallet_amount
-        _data["school"] = str(_user.school_information.name)
+        _data["school"] = str(new_user.school_information.name)
         _data["user_type"] = new_user.user_type.title
         _data.pop('password', None)
         _data.pop('user_id', None)

@@ -286,7 +286,7 @@ class TransactionResource(Resource):
                     if "school_name" not in json_input:
                         return moov_errors("school_name field is compulsory for ride fare", 400)
                     
-                    school = get_school(json_input["school_name"])
+                    school = get_school((str(json_input["school_name"])).lower())
                     if not school:
                         return not_found_errors(json_input["school_name"])
 

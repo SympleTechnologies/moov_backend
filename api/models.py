@@ -214,23 +214,23 @@ class User(db.Model, ModelViewsMix):
         return average_ratings 
 
     def check_password(self, password):
-      if self.password is None:
-         return False
-      return check_password_hash(self.password, password)
+        if self.password is None:
+            return False
+        return check_password_hash(self.password, password)
 
     @classmethod
     def is_user_data_taken(cls, email):
-       return db.session.query(db.exists().where(User.email==email)).scalar()
+        return db.session.query(db.exists().where(User.email==email)).scalar()
 
     @classmethod
     def is_user_id_taken(cls, user_id):
-       return db.session.query(db.exists().where(User.user_id==user_id)).scalar()
+        return db.session.query(db.exists().where(User.user_id==user_id)).scalar()
 
     @classmethod
     def confirm_login(cls, email, user_id):
         user = db.session.query(User).filter(User.email==email).first()
         if str(user.user_id) == str(user_id):
-           return True
+            return True
         return False
 
 
@@ -317,10 +317,10 @@ class DriverInfo(db.Model, ModelViewsMix):
         return '<DriverInfo %r>' % (self.driver_id)
 
     def __getitem__(self, key):
-      return getattr(self, key)
+        return getattr(self, key)
 
     def __setitem__(self, key, item):
-      return setattr(self, key, item)
+        return setattr(self, key, item)
 
     @classmethod
     def add_to_trip(cls, driver_id, email, slots):

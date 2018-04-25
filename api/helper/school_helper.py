@@ -10,4 +10,3 @@ except ImportError:
 def get_school(name):
     _school = SchoolInfo.query.filter(SchoolInfo.name==name).first()
     return _school
-  

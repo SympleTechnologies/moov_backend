@@ -54,6 +54,13 @@ class UserSchema(Schema):
     ratings = fields.Integer(errors={'type': 'Invalid type'})
     created_at = fields.DateTime(dump_only=True)
     modified_at = fields.DateTime(dump_only=True)
+    # addition information not in the db
+    school = fields.Str(
+                required=True,
+                errors={
+                    'required': 'Please provide a valid school.',
+                    'type': 'Invalid type'
+            })
 
     @validates_schema(pass_original=True)
     def unknown_fields(self, data, original_data):

@@ -138,18 +138,20 @@ def create_flask_app(environment):
         response.status_code = 500
         return response
 
-    @app.errorhandler(Exception)
-    def unhandled_exception(error):
-        response = jsonify(dict(
-            status='error',
-            data={
-                'error': 'Unhandle Error',
-                'message': 'The server encountered an internal error and was unable to complete your request.'
-            }
-        ))
-        response.status_code = 500
-        app.logger.error(repr(error))
-        return response
+    if environment.lower() == "production":
+        # handles 500 exception on production
+        @app.errorhandler(Exception)
+        def unhandled_exception(error):
+            response = jsonify(dict(
+                status='error',
+                data={
+                    'error': 'Unhandle Error',
+                    'message': 'The server encountered an internal error and was unable to complete your request.'
+                }
+            ))
+            response.status_code = 500
+            app.logger.error(repr(error))
+            return response
 
     return app
 
