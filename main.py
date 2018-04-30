@@ -27,6 +27,7 @@ try:
     from api.v1.views.free_ride import FreeRideResource
     from api.v1.views.notification import NotificationResource
     from api.v1.views.forgot_password import ForgotPasswordResource
+    from api.v1.views.school import SchoolResource
 except ImportError:
     from moov_backend.config import app_configuration
     from moov_backend.api.v1.views.route import RouteResource
@@ -44,6 +45,7 @@ except ImportError:
     from moov_backend.api.v1.views.free_ride import FreeRideResource
     from moov_backend.api.v1.views.notification import NotificationResource
     from moov_backend.api.v1.views.forgot_password import ForgotPasswordResource
+    from moov_backend.api.v1.views.school import SchoolResource
 
 
 dotenv_path = join(dirname(__file__), '.env')
@@ -115,6 +117,9 @@ def create_flask_app(environment):
 
     # Forgot Password routes
     api.add_resource(ForgotPasswordResource, '/api/v1/forgot_password', '/api/v1/forgot_password/', endpoint='forgot_password')
+
+    # School routes
+    api.add_resource(SchoolResource, '/api/v1/all_schools', '/api/v1/all_schools/', endpoint='all_schools')
 
 
     # handle default 404 exceptions with a custom response

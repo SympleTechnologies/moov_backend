@@ -205,6 +205,41 @@ class FreeRideSchema(Schema):
         check_unknown_fields(data, original_data, self.fields)
 
 
+class SchoolInfoSchema(Schema):
+    id = fields.Str(dump_only=True)
+    name = fields.Str(
+                required=True,
+                errors={
+                    'required': 'Please provide the school name.',
+                    'type': 'Invalid type'
+            })
+    alias = fields.Str(errors={'type': 'Invalid type'})
+    password = fields.Str(
+                    required=True,
+                    errors={
+                        'required': 'Please provide the password for this account.',
+                        'type': 'Invalid type'
+                })
+    admin_status = fields.Bool(errors={'type': 'Invalid type'})
+    email = fields.Str(
+                    required=True,
+                    errors={
+                        'required': 'Please provide a valid email for this account.',
+                        'type': 'Invalid type'
+                })
+    user_type = fields.Str(
+                        required=True,
+                        errors={
+                            'required': 'Please provide the user type. It can either be a driver or student',
+                            'type': 'Invalid type'
+                    })
+    reset_password = fields.Bool(errors={'type': 'Invalid type'})
+    bank_name = fields.Str(errors={'type': 'Invalid type'})
+    account_number = fields.Str(errors={'type': 'Invalid type'})
+    created_at = fields.DateTime(dump_only=True)
+    modified_at = fields.DateTime(dump_only=True)
+
+
 user_schema = UserSchema()
 user_login_schema = UserLoginSchema()
 forgot_password_schema = ForgotPassword()
@@ -212,3 +247,4 @@ transaction_schema = TransactionSchema()
 notification_schema = NotificationSchema()
 free_ride_schema = FreeRideSchema()
 driver_info_schema = DriverInfoSchema()
+school_info_schema= SchoolInfoSchema()

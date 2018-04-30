@@ -348,7 +348,7 @@ class DriverInfo(db.Model, ModelViewsMix):
 
     @classmethod
     def confirm_on_trip(cls, driver_id, email):
-        driver = db.session.query(Driver).filter(Driver.driver_id==driver_id).first()
+        driver = db.session.query(DriverInfo).filter(DriverInfo.driver_id==driver_id).first()
         if email in driver.on_trip_with:
             return True
         return False

@@ -36,8 +36,8 @@ class ForgotPasswordResource(Resource):
         if not _user:
             return moov_errors('User does not exist', 404)
 
-        if _user.authentication_type != None and \
-           _user.authentication_type != "AuthenticationType.email":
+        if _user.authentication_type.value != None and \
+           _user.authentication_type.value != "email_type":
             return moov_errors('You cannot reset password for authentications other than email', 401)
 
         generated_password = generate_password()
