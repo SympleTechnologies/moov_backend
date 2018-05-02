@@ -153,7 +153,7 @@ class User(db.Model, ModelViewsMix):
     forgot_password = db.relationship('ForgotPassword', backref='user_forgot_password', lazy='dynamic')
     wallet_user = db.relationship('Wallet', cascade="all,delete-orphan", back_populates='user_wallet')
     free_ride = db.relationship('FreeRide', backref='user_free_ride', lazy='dynamic')
-    driver_info = db.relationship('DriverInfo', cascade="all,delete-orphan", backref='driver_information', lazy='dynamic')
+    driver_info = db.relationship('DriverInfo', backref='driver_information', lazy='dynamic')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -307,7 +307,7 @@ class DriverInfo(db.Model, ModelViewsMix):
     admin_confirmed = db.Column(db.Boolean, default=False)
     bank_name = db.Column(db.String)
     account_number = db.Column(db.String)
-    driver_id = db.Column(db.String(), db.ForeignKey('User.id'), unique=True)
+    driver_id = db.Column(db.String(), db.ForeignKey('User.id', ondelete='SET NULL'), unique=True)
     admission_type_id = db.Column(db.String(), db.ForeignKey('AdmissionType.id', ondelete='SET NULL'))
     number_of_rides = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

@@ -17,6 +17,7 @@ try:
         is_empty_request_fields, remove_unwanted_keys, get_distance
     )
     from ...helper.driver_helper import get_nearest_or_furthest_drivers
+    from ...helper.school_helper import get_school
     from ...helper.error_message import moov_errors, not_found_errors
     from ...models import User, DriverInfo, AdmissionType
     from ...schema import driver_info_schema, user_schema
@@ -29,6 +30,7 @@ except ImportError:
         is_empty_request_fields, remove_unwanted_keys, get_distance
     )
     from moov_backend.api.helper.driver_helper import get_nearest_or_furthest_drivers
+    from moov_backend.api.helper.school_helper import get_school
     from moov_backend.api.helper.error_message import moov_errors, not_found_errors
     from moov_backend.api.models import User, DriverInfo, AdmissionType
     from moov_backend.api.schema import driver_info_schema, user_schema
@@ -47,15 +49,18 @@ class DriverResource(Resource):
         _user_destination = request.args.get('user_destination')
         _slots = request.args.get('slots')
         _fare_charge = request.args.get('fare_charge')
+        _school = request.args.get('school')
         if not _user_location or \
            not _user_destination or \
            not _slots or \
            not _fare_charge or \
+           not _school or \
            validate_empty_string(_user_location) or \
            validate_empty_string(_user_destination) or \
            validate_empty_string(_slots) or \
-           validate_empty_string(_fare_charge):
-            return moov_errors("Parameters user_destination, user_location, slots and fare_charge are required", 400)
+           validate_empty_string(_fare_charge) or \
+           validate_empty_string(_school):
+            return moov_errors("Parameters user_destination, user_location, slots, fare_charge and school are required", 400)
 
         try:
             _user_location = _user_location.split(',')
@@ -72,12 +77,18 @@ class DriverResource(Resource):
             _user_destination_longitude = float(_user_destination[1])
             _slots = int(_slots)
             _fare_charge = float(_fare_charge)
+            _school = str(_school)
         except ValueError as error:
             return moov_errors("Parameters should have valid types ({0})".format(error), 400)
 
         # handles mischief
         if _slots <= 0:
             return moov_errors("Number of slots cannot be less than or equal to zero", 400)
+
+        # check school
+        school = get_school(name=_school.lower())
+        if not school:
+            return moov_errors("School ({0}) not found".format(_school), 404)
 
         _user_wallet = _user.wallet_user[0].wallet_amount
         if _user_wallet < _fare_charge:
@@ -98,34 +109,40 @@ class DriverResource(Resource):
 
         # sift the result to get empty slot drivers and available drivers
         for driver in drivers:
-            _available_slot_drivers.append(driver)
-            if driver.on_trip_with == None:
-                _empty_slot_drivers.append(driver)
+            # make certain the driver is for the requested school
+            if str(driver.driver_information.school_id) == str(school.id):
+                _available_slot_drivers.append(driver)
+                if driver.on_trip_with == None:
+                    _empty_slot_drivers.append(driver)
 
-        if _empty_slot_drivers:
+        if _available_slot_drivers:
+            # handle case where there are available slot drivers 
+            if len(_available_slot_drivers) == 1:
+                _driver = _available_slot_drivers[0]
+            else:
+                nearest_location_drivers = get_nearest_or_furthest_drivers(
+                                                driver_list=_available_slot_drivers,
+                                                user_latitude=_user_location_latitude,
+                                                user_longitude=_user_location_longitude,
+                                                number_of_drivers=5,
+                                                operation="nearest")
+                nearest_destination_driver = get_nearest_or_furthest_drivers(
+                                                driver_list=nearest_location_drivers,
+                                                user_latitude=_user_destination_latitude,
+                                                user_longitude=_user_destination_longitude,
+                                                number_of_drivers=1,
+                                                operation="nearest")
+                
+                _driver = nearest_destination_driver[0]
+        elif _empty_slot_drivers:
             # handle case where there are empty slot drivers
             _driver = _empty_slot_drivers[0]
             _driver.available_car_slots = _driver.car_slots
             _driver.on_trip_with = {}
             _driver.save()
         else:
-            # handle case where there are available slot drivers 
-            if len(_available_slot_drivers) == 1:
-                _driver = _available_slot_drivers[0]
-            else:
-                nearest_destination_drivers = get_nearest_or_furthest_drivers(
-                                                driver_list=_available_slot_drivers,
-                                                user_latitude=_user_destination_latitude,
-                                                user_longitude=_user_destination_longitude,
-                                                number_of_drivers=2,
-                                                operation="nearest")
-                nearest_location_driver = get_nearest_or_furthest_drivers(
-                                                driver_list=nearest_destination_drivers,
-                                                user_latitude=_user_location_latitude,
-                                                user_longitude=_user_location_longitude,
-                                                number_of_drivers=1,
-                                                operation="nearest")
-                _driver = nearest_location_driver[0]
+            # handle case no driver was found for the school at all
+            return moov_errors("No driver available for this school ({0})".format(_school), 404)
 
         _driver.add_to_trip(_driver.driver_id, str(_user.email), _slots)
         _driver_data, _ = driver_info_schema.dump(_driver)
