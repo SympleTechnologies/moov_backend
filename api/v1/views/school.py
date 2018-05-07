@@ -22,45 +22,21 @@ class SchoolResource(Resource):
         if not _user:
             return moov_errors('User does not exist', 404)
 
-        _page = request.args.get('page')
-        _limit = request.args.get('limit')
-        page = int(_page or current_app.config['DEFAULT_PAGE'])
-        limit = int(_limit or current_app.config['PAGE_LIMIT'])
-
-        _schools = SchoolInfo.query.order_by(SchoolInfo.name)
-        school_count = len(_schools.all())
-        _schools = _schools.paginate(
-            page=page, per_page=limit, error_out=False)
+        _schools = SchoolInfo.query.order_by(SchoolInfo.name).all()
+        school_count = len(_schools)
 
         schools = []
-        for _school in _schools.items:
+        for _school in _schools:
             _data, _ = school_info_schema.dump(_school)
+            for item in ['account_number', 'bank_name', 'email', 'password', 'admin_status', 'reset_password']:
+                _data.pop(item, None)
             schools.append(_data)
-
-        previous_url = None
-        next_url = None
-
-        if _schools.has_next:
-            next_url = url_for(request.endpoint,
-                               limit=limit,
-                               page=page+1,
-                               _external=True)
-        if _schools.has_prev:
-            previous_url = url_for(request.endpoint,
-                                   limit=limit,
-                                   page=page-1,
-                                   _external=True)
 
         return {
             'status': 'success',
             'data': { 
                         'message': 'Schools successfully retrieved',
                         'all_count': school_count,
-                        'current_count': len(schools),
                         'schools': schools,
-                        'next_url': next_url,
-                        'previous_url': previous_url,
-                        'current_page': _schools.page,
-                        'all_pages': _schools.pages
                     }
         }, 200
