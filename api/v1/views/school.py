@@ -15,13 +15,7 @@ except ImportError:
 
 class SchoolResource(Resource):
     
-    @token_required
     def get(self):
-        _user_id = g.current_user.id
-        _user = User.query.get(_user_id)
-        if not _user:
-            return moov_errors('User does not exist', 404)
-
         _schools = SchoolInfo.query.order_by(SchoolInfo.name).all()
         school_count = len(_schools)
 
