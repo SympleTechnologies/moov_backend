@@ -18,7 +18,7 @@ try:
     from ...helper.free_ride_helper import get_free_ride_token, save_free_ride_token
     from ...helper.transactions_helper import (
         paystack_deduction_amount, check_transaction_validity, load_wallet_operation,
-        ride_fare_operation, transfer_operation, save_transaction
+        ride_fare_operation, transfer_operation, save_transaction, verify_paystack_payment
     )
     from ...models import (
         User, Transaction, Wallet, Icon, FreeRide, OperationType, TransactionType,
@@ -37,7 +37,7 @@ except ImportError:
     from moov_backend.api.helper.free_ride_helper import get_free_ride_token, save_free_ride_token
     from moov_backend.api.helper.transactions_helper import (
         paystack_deduction_amount, check_transaction_validity, load_wallet_operation,
-        ride_fare_operation, transfer_operation, save_transaction
+        ride_fare_operation, transfer_operation, save_transaction, verify_paystack_payment
     )
     from moov_backend.api.models import (
         User, Transaction, Wallet, Icon, FreeRide, OperationType, TransactionType,
@@ -108,7 +108,15 @@ class TransactionResource(Resource):
     def post(self):
         json_input = request.get_json()
         
-        keys = ['type_of_operation', 'cost_of_transaction', 'receiver_email', 'school_name', 'car_owner_email', 'free_token']
+        keys = [
+            'type_of_operation', 
+            'cost_of_transaction', 
+            'receiver_email', 
+            'school_name',
+            'verification_code', 
+            'car_owner_email', 
+            'free_token'
+        ]
 
         _transaction = {}
         if validate_input_data(json_input, keys, _transaction):
@@ -138,6 +146,14 @@ class TransactionResource(Resource):
 
         # case load_wallet
         if str(json_input['type_of_operation']).lower() == 'load_wallet':
+            if 'verification_code' not in json_input:
+                return moov_errors('Transaction denied. Verification is compulsory to load wallet', 400)
+
+            # third-party api to verify paystack payment
+            paystack_verified = verify_paystack_payment(user=_current_user, verification_code=str(json_input['verification_code']))
+            if not paystack_verified:
+                return moov_errors("Unauthorized transaction. Paystack payment was not verified", 401)
+
             cost_of_transaction = json_input["cost_of_transaction"]
 
             message = "Cost of transaction cannot be a negative value"

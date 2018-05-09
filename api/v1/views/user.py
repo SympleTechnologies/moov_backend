@@ -109,7 +109,7 @@ class UserResource(Resource):
 
             if key == 'password':
                 if _user.check_password(json_input['password']):
-                  return moov_errors('Unauthorized, you cannot update with the same password', 401)
+                    return moov_errors('Unauthorized, you cannot update with the same password', 401)
 
             if key == 'authorization_code':
                 _user.__setitem__("authorization_code_status", True)

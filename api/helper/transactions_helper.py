@@ -1,7 +1,9 @@
 
 # imports
-from datetime import datetime, timedelta
+import os
+import requests
 
+from datetime import datetime, timedelta
 from sqlalchemy import desc, and_
 
 try:
@@ -209,3 +211,28 @@ def paystack_deduction_amount(cost_of_transaction):
 def check_transaction_validity(amount, message):
     if amount < 0:
         return moov_errors(message, 400)
+
+# verify payment
+def verify_paystack_payment(user, verification_code):
+    # user needed to confirm authorization code
+    url = "https://api.paystack.co/transaction/verify/{0}".format(verification_code)
+    Authorization = "Bearer {0}".format(os.environ.get("PAYSTACK_SECRET_KEY"))
+    headers = {'Authorization': Authorization}
+    response = requests.get(url, headers=headers)
+    data = response.json()
+    
+    # handle errors
+    if response.status_code != 200:
+        return False
+
+    # update authorization code
+    if not user.authorization_code:
+        user.authorization_code = str(data["data"]["authorization"]["authorization_code"])
+        user.save()
+
+    # handle transaction not succesful
+    if str(data["data"]["status"]) != "success":
+        return False
+
+    # handle transaction succesful
+    return True

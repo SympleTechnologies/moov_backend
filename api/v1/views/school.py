@@ -22,6 +22,7 @@ class SchoolResource(Resource):
         schools = []
         for _school in _schools:
             _data, _ = school_info_schema.dump(_school)
+            _data['name'] = _data['name'].upper()
             for item in ['account_number', 'bank_name', 'email', 'password', 'admin_status', 'reset_password']:
                 _data.pop(item, None)
             schools.append(_data)
@@ -29,8 +30,8 @@ class SchoolResource(Resource):
         return {
             'status': 'success',
             'data': { 
-                        'message': 'Schools successfully retrieved',
-                        'all_count': school_count,
-                        'schools': schools,
-                    }
+                'message': 'Schools successfully retrieved',
+                'all_count': school_count,
+                'schools': schools,
+            }
         }, 200
