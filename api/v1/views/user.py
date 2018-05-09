@@ -43,6 +43,7 @@ class UserResource(Resource):
     
     @token_required
     def get(self):
+        _data = {}
         _user_id = g.current_user.id
         _user = User.query.get(_user_id)
         if not _user:
@@ -56,7 +57,17 @@ class UserResource(Resource):
            user_type == "moov":
             return moov_errors("Unauthorized access", 401)
 
-        _data, _ = user_schema.dump(_user)
+        # handle driver users
+        if user_type == "driver":
+            driver_info = DriverInfo.query.filter(DriverInfo.driver_id==_user_id).first()
+            driver_info_data, _ = driver_info_schema.dump(driver_info)
+            for key in ['bank_name', 'account_number', 'driver_id', 'admission_type_id']:
+                driver_info_data.pop(key, None)
+            _data, _ = user_schema.dump(_user)
+            _data["driver_info"] = driver_info_data
+        else:
+            _data, _ = user_schema.dump(_user)
+
         _data['wallet_amount'] = _user.wallet_user[0].wallet_amount
         _data["school"] = str(_user.school_information.name)
         _data["user_type"] = user_type
