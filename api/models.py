@@ -341,9 +341,14 @@ class DriverInfo(db.Model, ModelViewsMix):
         driver = db.session.query(DriverInfo).filter(DriverInfo.driver_id==driver_id).first()
         slots = driver.on_trip_with[email]
         driver.available_car_slots += slots
-        driver.on_trip_with.pop(email, None)
+
+        obj = {}
+        for key in driver.on_trip_with:
+            obj[str(key)] = driver.on_trip_with[key]
+        obj.pop(email, None)
+        driver.on_trip_with = obj
         if not driver.on_trip_with:
-            driver.on_trip_with = None
+            driver.on_trip_with = {}}
         driver.save()
 
     @classmethod

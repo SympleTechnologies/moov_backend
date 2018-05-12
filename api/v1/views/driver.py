@@ -18,6 +18,7 @@ try:
     )
     from ...helper.driver_helper import get_nearest_or_furthest_drivers
     from ...helper.school_helper import get_school
+    from ...helper.notification_helper import save_notification
     from ...helper.error_message import moov_errors, not_found_errors
     from ...models import User, DriverInfo, AdmissionType
     from ...schema import driver_info_schema, user_schema
@@ -31,6 +32,7 @@ except ImportError:
     )
     from moov_backend.api.helper.driver_helper import get_nearest_or_furthest_drivers
     from moov_backend.api.helper.school_helper import get_school
+    from moov_backend.api.helper.notification_helper import save_notification
     from moov_backend.api.helper.error_message import moov_errors, not_found_errors
     from moov_backend.api.models import User, DriverInfo, AdmissionType
     from moov_backend.api.schema import driver_info_schema, user_schema
@@ -152,6 +154,13 @@ class DriverResource(Resource):
             if key not in ["id", "user_type_id", "user_id", "password", "authorization_code", \
                "authorization_code_status", "reset_password", "number_of_rides", "user_type"]:
                 _driver_data[key] = _driver_user_data[key]
+
+        # send notification to driver
+        save_notification(
+            recipient_id=_driver_user_data['id'],
+            sender_id=_user_id,
+            message="{0} ({1}) has requested to ride with you".format(_user.firstname.title(), _user.email)
+        )
             
         return {
             'status': 'success',
@@ -216,3 +225,73 @@ class DriverResource(Resource):
                 'message': 'Driver information updated succesfully',
             }
         }, 200
+
+
+class DriverConfirmRideResouce(Resource):
+    
+    @token_required
+    @validate_request()
+    def post(self):
+        json_input = request.get_json()
+
+        _driver_id = g.current_user.id
+        _driver = DriverInfo.query.filter(DriverInfo.driver_id==_driver_id).first()
+        if not _driver:
+            return moov_errors("Driver does not exist", 404)
+
+        keys = ['confirmation_type', 'user_email']
+        if validate_input_data(json_input, keys):
+            return validate_input_data(json_input, keys)
+        
+        if 'confirmation_type' not in json_input or 'user_email' not in json_input:
+            return moov_errors('Confirmation type and user email are required', 400)
+
+        _confirmation_type = str(json_input['confirmation_type']).lower()
+        if _confirmation_type not in ['accept', 'reject']:
+            return moov_errors('Confirmation type can only be accept or reject', 400)
+
+        _user_email = str(json_input['user_email']).strip().lower()
+        _user = User.query.filter(User.email==_user_email).first()
+        if not _user:
+            return moov_errors('User email is not valid', 400)
+
+        # confirm if user was assigned/requested for this driver
+        confirm_request = False
+        for key in _driver.on_trip_with:
+            if key == _user.email:
+                confirm_request = True
+        if not confirm_request:
+            return moov_errors('{0} did not request a ride with current driver'.format(_user_email), 400)
+
+        if _confirmation_type=="reject":
+            _driver.remove_from_trip(_driver_id, str(_user.email))
+            # send notification to user
+            save_notification(
+                recipient_id=_user.id,
+                sender_id=_driver_id,
+                message="{0} has rejected your request for a ride".format(
+                    _driver.driver_information.firstname.title()
+                )
+            )
+            return {
+                'status': 'success',
+                'data': {
+                    'message': 'Ride successfully rejected'
+                }
+            }, 200
+
+        # send notification to user
+        save_notification(
+            recipient_id=_user.id,
+            sender_id=_driver_id,
+            message="{0} has accepted your request for a ride".format(
+                _driver.driver_information.firstname.title()
+            )
+        )
+        return {
+            'status': 'success',
+            'data': {
+                'message': 'Ride successfully accepted'
+            }
+        }, 200
+

@@ -18,7 +18,7 @@ try:
         UserAuthorizationResource
     )
     from api.v1.views.driver import (
-        DriverResource
+        DriverResource, DriverConfirmRideResouce
     )
     from api.v1.views.profile_page import BasicInfoResource
     from api.v1.views.transaction import (
@@ -36,7 +36,7 @@ except ImportError:
         UserAuthorizationResource
     )
     from moov_backend.api.v1.views.driver import (
-        DriverResource
+        DriverResource, DriverConfirmRideResouce
     )
     from moov_backend.api.v1.views.profile_page import BasicInfoResource
     from moov_backend.api.v1.views.transaction import (
@@ -46,7 +46,7 @@ except ImportError:
     from moov_backend.api.v1.views.notification import NotificationResource
     from moov_backend.api.v1.views.forgot_password import ForgotPasswordResource
     from moov_backend.api.v1.views.school import SchoolResource
-
+    
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -97,6 +97,7 @@ def create_flask_app(environment):
 
     # Driver routes
     api.add_resource(DriverResource, '/api/v1/driver', '/api/v1/driver/', endpoint='single_driver')
+    api.add_resource(DriverConfirmRideResouce, '/api/v1/driver_confirm_ride', '/api/v1/driver_confirm_ride/', endpoint='driver_confirm_endpoint')
 
     # Authentication routes
     api.add_resource(UserSignupResource, '/api/v1/signup', '/api/v1/signup/', endpoint='singup_user')
@@ -104,7 +105,7 @@ def create_flask_app(environment):
 
     # Transaction routes
     api.add_resource(TransactionResource, '/api/v1/transaction', '/api/v1/transaction/', endpoint='single_transaction')
-    api.add_resource(TransactionResource, '/api/v1/all_transactions', '/api/v1/all_transactions/', endpoint='all_transactions')
+    api.add_resource(AllTransactionsResource, '/api/v1/all_transactions', '/api/v1/all_transactions/', endpoint='all_transactions')
 
     # Profile Page routes
     api.add_resource(BasicInfoResource, '/api/v1/basic_info', '/api/v1/basic_info/', endpoint='user_basic_info')
