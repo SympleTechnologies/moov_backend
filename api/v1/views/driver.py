@@ -47,6 +47,8 @@ class DriverResource(Resource):
         if not _user:
             return moov_errors('User does not exist', 404)
 
+        _user_location_name = request.args.get('user_location_name')
+        _user_destination_name = request.args.get('user_destination_name')
         _user_location = request.args.get('user_location')
         _user_destination = request.args.get('user_destination')
         _slots = request.args.get('slots')
@@ -54,15 +56,19 @@ class DriverResource(Resource):
         _school = request.args.get('school')
         if not _user_location or \
            not _user_destination or \
+           not _user_location_name or \
+           not _user_destination_name or \
            not _slots or \
            not _fare_charge or \
            not _school or \
            validate_empty_string(_user_location) or \
            validate_empty_string(_user_destination) or \
+           validate_empty_string(_user_location_name) or \
+           validate_empty_string(_user_destination_name) or \
            validate_empty_string(_slots) or \
            validate_empty_string(_fare_charge) or \
            validate_empty_string(_school):
-            return moov_errors("Parameters user_destination, user_location, slots, fare_charge and school are required", 400)
+            return moov_errors("Parameters user_destination_name, user_location_name, user_destination, user_location, slots, fare_charge and school are required", 400)
 
         try:
             _user_location = _user_location.split(',')
@@ -73,6 +79,8 @@ class DriverResource(Resource):
                 return moov_errors("User destination and location should contain latitude and longitude separated by comma(,)", 400)
             
             # cast the parameters
+            _user_location_name = str(_user_location_name)
+            _user_destination_name = str(_user_destination_name)
             _user_location_latitude = float(_user_location[0])
             _user_location_longitude = float(_user_location[1])
             _user_destination_latitude = float(_user_destination[0])
@@ -86,6 +94,10 @@ class DriverResource(Resource):
         # handles mischief
         if _slots <= 0:
             return moov_errors("Number of slots cannot be less than or equal to zero", 400)
+
+        # checks if user is not currently on any ride
+        if _user.current_ride:
+            return moov_errors("Sorry, you cannot make another request if you already requested or are currently on a ride", 400)
 
         # check school
         school = get_school(name=_school.lower())
@@ -148,6 +160,12 @@ class DriverResource(Resource):
 
         _driver.add_to_trip(_driver.driver_id, str(_user.email), _slots)
         _driver_data, _ = driver_info_schema.dump(_driver)
+        _driver_data["driver_location"] = [_driver_data["location_latitude"], _driver_data["location_longitude"]]
+        _driver_data["driver_destination"] = [_driver_data["destination_latitude"], _driver_data["destination_longitude"]]
+        # remove all irrelevant info for drivers
+        for key in ['bank_name', 'account_number', 'admission_type_id', 'driver_id', 'location_latitude', \
+        'location_longitude', 'destination_latitude', 'destination_longitude']:
+            _driver_data.pop(key, None)
         # append other driver's information from the user's model
         _driver_user_data, _ = user_schema.dump(_driver.driver_information)
         for key in _driver_user_data.keys():
@@ -155,11 +173,25 @@ class DriverResource(Resource):
                "authorization_code_status", "reset_password", "number_of_rides", "user_type"]:
                 _driver_data[key] = _driver_user_data[key]
 
+        # User Aspect
+        # remove all irrelevant info for drivers
+        for key in ['on_trip_with', 'created_at', 'modified_at', 'current_ride', 'authentication_type']:
+            _driver_data.pop(key, None)
+        # add to user's current ride
+        _user.add_current_ride(
+            user_email=_user.email,
+            driver_info=_driver_data,
+            user_location_name=_user_location_name,
+            user_destination_name=_user_destination_name,
+            user_location=[_user_location_latitude, _user_location_longitude],
+            user_destination=[_user_destination_latitude, _user_destination_longitude]
+        )
         # send notification to driver
         save_notification(
             recipient_id=_driver_user_data['id'],
             sender_id=_user_id,
-            message="{0} ({1}) has requested to ride with you".format(_user.firstname.title(), _user.email)
+            message="{0} ({1}) has requested to ride with you from {2} to {3}" \
+                .format(_user.firstname.title(), _user.email, _user_location_name, _user_destination_name)
         )
             
         return {
@@ -257,14 +289,16 @@ class DriverConfirmRideResouce(Resource):
 
         # confirm if user was assigned/requested for this driver
         confirm_request = False
-        for key in _driver.on_trip_with:
-            if key == _user.email:
-                confirm_request = True
+        if _driver.on_trip_with:
+            for key in _driver.on_trip_with:
+                if key == _user.email:
+                    confirm_request = True
         if not confirm_request:
             return moov_errors('{0} did not request a ride with current driver'.format(_user_email), 400)
 
         if _confirmation_type=="reject":
             _driver.remove_from_trip(_driver_id, str(_user.email))
+            _user.remove_current_ride(str(_user.email))
             # send notification to user
             save_notification(
                 recipient_id=_user.id,

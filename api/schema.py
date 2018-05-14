@@ -52,6 +52,7 @@ class UserSchema(Schema):
     authorization_code = fields.Str(errors={'type': 'Invalid type'})
     authorization_code_status = fields.Bool(errors={'type': 'Invalid type'})
     ratings = fields.Integer(errors={'type': 'Invalid type'})
+    current_ride = fields.Dict(errors={'type': 'Invalid type'})
     created_at = fields.DateTime(dump_only=True)
     modified_at = fields.DateTime(dump_only=True)
     # addition information not in the db

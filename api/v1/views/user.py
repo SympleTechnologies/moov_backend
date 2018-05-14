@@ -61,7 +61,10 @@ class UserResource(Resource):
         if user_type == "driver":
             driver_info = DriverInfo.query.filter(DriverInfo.driver_id==_user_id).first()
             driver_info_data, _ = driver_info_schema.dump(driver_info)
-            for key in ['bank_name', 'account_number', 'driver_id', 'admission_type_id']:
+            driver_info_data["driver_location"] = [driver_info_data["location_latitude"], driver_info_data["location_longitude"]]
+            driver_info_data["driver_destination"] = [driver_info_data["destination_latitude"], driver_info_data["destination_longitude"]]
+            for key in ['bank_name', 'account_number', 'driver_id', 'admission_type_id', 'location_latitude', \
+            'location_longitude', 'destination_latitude', 'destination_longitude']:
                 driver_info_data.pop(key, None)
             _data, _ = user_schema.dump(_user)
             _data["driver_info"] = driver_info_data

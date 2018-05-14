@@ -150,6 +150,7 @@ class User(db.Model, ModelViewsMix):
     authorization_code_status = db.Column(db.Boolean, default=False)
     number_of_rides = db.Column(db.Integer, default=0)
     reset_password = db.Column(db.Boolean, default=False)
+    current_ride = db.Column(json_type, nullable=True)
     forgot_password = db.relationship('ForgotPassword', backref='user_forgot_password', lazy='dynamic')
     wallet_user = db.relationship('Wallet', cascade="all,delete-orphan", back_populates='user_wallet')
     free_ride = db.relationship('FreeRide', backref='user_free_ride', lazy='dynamic')
@@ -233,6 +234,26 @@ class User(db.Model, ModelViewsMix):
             return True
         return False
 
+    @classmethod
+    def add_current_ride(cls, user_email, driver_info, user_location_name, user_destination_name, user_location, user_destination):
+        user = db.session.query(User).filter(User.email==user_email).first()
+
+        obj = {}
+        obj["driver_info"] = driver_info
+        obj["user_location_name"] = user_location_name
+        obj["user_destination_name"] = user_destination_name
+        obj["user_location"] = user_location
+        obj["user_destination"] = user_destination
+        user.current_ride = obj
+        return user.save()
+
+    @classmethod
+    def remove_current_ride(cls, user_email):
+        user = db.session.query(User).filter(User.email==user_email).first()
+        user.current_ride = None
+        user.save()
+        
+
 
 class ForgotPassword(db.Model, ModelViewsMix):
   
@@ -297,7 +318,7 @@ class DriverInfo(db.Model, ModelViewsMix):
     car_slots = db.Column(db.Integer, nullable=True)
     available_car_slots = db.Column(db.Integer)
     status = db.Column(db.Boolean, default=False)
-    on_trip_with = db.Column(json_type, nullable=True, default=None)
+    on_trip_with = db.Column(json_type, nullable=True)
     car_model = db.Column(db.String)
     left_image = db.Column(db.String)
     right_image = db.Column(db.String)
@@ -348,7 +369,7 @@ class DriverInfo(db.Model, ModelViewsMix):
         obj.pop(email, None)
         driver.on_trip_with = obj
         if not driver.on_trip_with:
-            driver.on_trip_with = {}}
+            driver.on_trip_with = None
         driver.save()
 
     @classmethod
