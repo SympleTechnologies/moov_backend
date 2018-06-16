@@ -1,4 +1,7 @@
 import os
+import logging
+import eventlet
+
 from os.path import join, dirname
 from dotenv import load_dotenv
 
@@ -7,7 +10,9 @@ from flask import Flask, jsonify
 from flask_sslify import SSLify
 from flask_cors import CORS
 from flask_migrate import Migrate
-from flask_restful import Api, abort
+from flask_restful import Api
+from flask_socketio import SocketIO, send, emit
+from logging.handlers import RotatingFileHandler
 
 
 try:
@@ -47,6 +52,8 @@ except ImportError:
     from moov_backend.api.v1.views.forgot_password import ForgotPasswordResource
     from moov_backend.api.v1.views.school import SchoolResource
     
+
+eventlet.monkey_patch()
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -163,3 +170,37 @@ def create_flask_app(environment):
 
 # enable flask commands
 app = create_flask_app(os.getenv("FLASK_CONFIG"))
+app.secret_key = os.getenv("APP_SECRET")
+
+port = int(os.environ.get('PORT', 5001))
+
+# initialize the log handler
+handler = RotatingFileHandler('errors.log', maxBytes=10000000, backupCount=5)
+formatter = logging.Formatter( "%(asctime)s | %(pathname)s:%(lineno)d | %(funcName)s | %(levelname)s | %(message)s ")
+# set the log handler level
+handler.setLevel(logging.INFO)
+# set the app logger level
+app.logger.setLevel(logging.INFO)
+werkzeug_handler = logging.getLogger('werkzeug')
+handler.setFormatter(formatter)
+app.logger.addHandler(handler)
+app.logger.addHandler(werkzeug_handler)
+
+socketio = SocketIO(app)
+
+socketio.run(app, host="0.0.0.0", port=port)
+
+@socketio.on('message')
+def handle_json_button(json):
+    # it will forward the json to all clients.
+    send(json, json=True)
+
+@socketio.on('alert_button')
+def handle_alert_event(json):
+    # it will forward the json to all clients.
+    print('Message from client was {0}'.format(json))
+    emit('alert', 'Message from javascript frontend')
+
+@socketio.on('client_connected')
+def handle_client_connect_event(json):
+    print('received json: {0}'.format(str(json)))

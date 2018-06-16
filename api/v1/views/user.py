@@ -5,7 +5,7 @@ from os.path import join, dirname
 from dotenv import load_dotenv
 
 from sqlalchemy import or_, and_
-from flask import g, request, jsonify
+from flask import g, current_app, request, jsonify
 from flask_restful import Resource
 from flask_jwt import jwt
 
@@ -76,6 +76,7 @@ class UserResource(Resource):
         _data["user_type"] = user_type
         _data.pop('password', None)
         _data.pop('user_id', None)
+        # socketio.on_event('my event', handle_my_custom_event, namespace='/test')
         return {
             'status': 'success',
             'data': { 
